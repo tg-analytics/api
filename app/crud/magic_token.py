@@ -1,70 +1,74 @@
-from datetime import datetime, timezone
+from datetime import datetime
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.models.magic_token import MagicToken
+from supabase import Client
 
 
 async def create_magic_token(
-    session: AsyncSession,
+    client: Client,
     *,
     email: str,
     token: str,
     expires_at: datetime,
-    user_id: int | None = None,
-) -> MagicToken:
-    magic_token = MagicToken(
-        email=email,
-        token=token,
-        expires_at=expires_at,
-        user_id=user_id,
-    )
-    session.add(magic_token)
-    await session.commit()
-    await session.refresh(magic_token)
-    return magic_token
+    user_id: str | None = None,
+) -> dict:
+    """Create a magic token in Supabase."""
+    token_data = {
+        "email": email,
+        "token": token,
+        "expires_at": expires_at.isoformat(),
+        "user_id": user_id,
+    }
+    
+    response = client.table("magic_tokens").insert(token_data).execute()
+    
+    if not response.data or len(response.data) == 0:
+        raise ValueError("Failed to create magic token")
+    
+    return response.data[0]
 
 
-async def get_magic_token_by_token(session: AsyncSession, token: str) -> MagicToken | None:
-    result = await session.execute(select(MagicToken).where(MagicToken.token == token))
-    return result.scalar_one_or_none()
+async def get_magic_token_by_token(client: Client, token: str) -> dict | None:
+    """Get magic token by token value from Supabase."""
+    response = client.table("magic_tokens").select("*").eq("token", token).execute()
+    
+    if response.data and len(response.data) > 0:
+        return response.data[0]
+    return None
 
 
 async def get_magic_tokens_by_email(
-    session: AsyncSession, email: str, *, active_only: bool = False
-) -> list[MagicToken]:
-    query = select(MagicToken).where(MagicToken.email == email)
+    client: Client, email: str, *, active_only: bool = False
+) -> list[dict]:
+    """Get all magic tokens for an email from Supabase."""
+    query = client.table("magic_tokens").select("*").eq("email", email)
+    
     if active_only:
-        now = datetime.now(timezone.utc)
-        query = query.where(
-            MagicToken.is_active.is_(True),
-            MagicToken.consumed.is_(False),
-            MagicToken.expires_at > now,
-        )
-
-    result = await session.execute(query.order_by(MagicToken.expires_at.desc()))
-    return list(result.scalars().all())
+        now = datetime.utcnow().isoformat()
+        query = query.is_("used_at", "null").gt("expires_at", now)
+    
+    response = query.order("expires_at", desc=True).execute()
+    
+    return response.data if response.data else []
 
 
-async def mark_magic_token_consumed(session: AsyncSession, token: str) -> MagicToken | None:
-    magic_token = await get_magic_token_by_token(session, token)
-    if not magic_token:
-        return None
+async def mark_magic_token_used(client: Client, token: str) -> dict | None:
+    """Mark a magic token as used in Supabase."""
+    update_data = {
+        "used_at": datetime.utcnow().isoformat(),
+    }
+    
+    response = client.table("magic_tokens").update(update_data).eq("token", token).execute()
+    
+    if response.data and len(response.data) > 0:
+        return response.data[0]
+    return None
 
-    magic_token.consumed = True
-    magic_token.is_active = False
-    await session.commit()
-    await session.refresh(magic_token)
-    return magic_token
 
-
-async def mark_magic_token_expired(session: AsyncSession, token: str) -> MagicToken | None:
-    magic_token = await get_magic_token_by_token(session, token)
-    if not magic_token:
-        return None
-
-    magic_token.is_active = False
-    await session.commit()
-    await session.refresh(magic_token)
-    return magic_token
+async def delete_expired_tokens(client: Client) -> int:
+    """Delete expired magic tokens from Supabase."""
+    now = datetime.utcnow().isoformat()
+    
+    response = client.table("magic_tokens").delete().lt("expires_at", now).execute()
+    
+    return len(response.data) if response.data else 0
+    
