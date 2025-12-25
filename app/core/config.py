@@ -1,7 +1,7 @@
 from functools import lru_cache
 from urllib.parse import quote_plus, urlparse
 
-from pydantic import model_validator
+from pydantic import EmailStr, model_validator
 from pydantic.version import VERSION
 
 if VERSION.startswith("1."):
@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     secret_key: str = "change-me"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+    resend_api_key: str | None = None
+    resend_from_email: EmailStr | None = None
+    magic_link_base_url: str | None = None
 
     @model_validator(mode="after")
     def build_database_url(self):
