@@ -1,5 +1,12 @@
 from functools import lru_cache
 
+from pydantic.version import VERSION
+
+if VERSION.startswith("1."):
+    raise ImportError(
+        f"Pydantic v2+ is required (found v{VERSION}). Reinstall dependencies with ``pip install -r requirements.txt``."
+    )
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
