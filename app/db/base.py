@@ -1,11 +1,35 @@
-from typing import Generator
+from functools import lru_cache
+from typing import AsyncGenerator, Generator
 
 import httpx
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import declarative_base
 from supabase import Client, ClientOptions, create_client
 
 from ..core.config import get_settings
 
+Base = declarative_base()
+
 _supabase_client: Client | None = None
+
+
+@lru_cache
+def get_engine():
+    settings = get_settings()
+    return create_async_engine(settings.database_url, future=True)
+
+
+@lru_cache
+def get_sessionmaker() -> async_sessionmaker[AsyncSession]:
+    return async_sessionmaker(bind=get_engine(), expire_on_commit=False)
+
+
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    """Dependency that yields an async database session."""
+
+    session_factory = get_sessionmaker()
+    async with session_factory() as session:
+        yield session
 
 
 def _initialize_client() -> Client:
