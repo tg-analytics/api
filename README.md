@@ -24,6 +24,10 @@ SUPABASE_DB_PASSWORD=<database-password-from-settings-database>
 SECRET_KEY=change-me
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
+RESEND_API_KEY=<resend-api-key>
+RESEND_FROM_EMAIL=Product Team <onboarding@example.com>
+# Optional: URL used to build the magic link (token will be appended or substituted if "{token}" is present)
+# MAGIC_LINK_BASE_URL=https://example.com/auth/magic-link?token=
 ```
 
 If you use Supabase, set `SUPABASE_URL` to your project URL (ending with `.supabase.co`) and supply either:
