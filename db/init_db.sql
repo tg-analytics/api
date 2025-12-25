@@ -57,6 +57,7 @@ CREATE TABLE notifications (
 -- Magic tokens
 CREATE TABLE magic_tokens (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   email TEXT NOT NULL UNIQUE,
   token TEXT NOT NULL UNIQUE,
   expires_at TIMESTAMPTZ NOT NULL,
