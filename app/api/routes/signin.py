@@ -121,7 +121,7 @@ async def confirm_magic_link(
             # Create user
             user_data = {
                 "email": email,
-                "name": name,
+                "first_name": name,
             }
             user_response = client.table("users").insert(user_data).execute()
             
@@ -184,7 +184,7 @@ async def confirm_magic_link(
             "user": {
                 "id": user["id"],
                 "email": user["email"],
-                "name": user.get("name"),
+                "name": user.get("first_name"),
             }
         }
     

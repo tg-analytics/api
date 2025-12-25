@@ -22,6 +22,28 @@ async def get_user_by_id(client: Client, user_id: str) -> dict | None:
     return None
 
 
+async def get_user_with_default_account(client: Client, user_id: str) -> dict | None:
+    """Get user with their default account information."""
+    # Get user
+    user = await get_user_by_id(client, user_id)
+    if not user:
+        return None
+    
+    # Get default account
+    account_response = client.table("accounts").select("id").eq("created_by", user_id).eq("is_default", True).limit(1).execute()
+    
+    default_account_id = None
+    if account_response.data and len(account_response.data) > 0:
+        default_account_id = account_response.data[0]["id"]
+    
+    return {
+        "email": user["email"],
+        "first_name": user.get("first_name"),
+        "last_name": user.get("last_name"),
+        "default_account_id": default_account_id
+    }
+
+
 async def create_user(client: Client, user_in: UserCreate) -> dict:
     """Create a new user in Supabase."""
     hashed_password = get_password_hash(user_in.password)
