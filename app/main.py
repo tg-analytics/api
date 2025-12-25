@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.api.routes import auth, protected, public
+from app.api.routes import auth, protected, public, signin
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -16,3 +16,4 @@ async def ping() -> dict[str, str]:
 app.include_router(public.router)
 app.include_router(auth.router)
 app.include_router(protected.router)
+app.include_router(signin.router)
