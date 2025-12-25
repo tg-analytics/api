@@ -12,7 +12,7 @@ if VERSION.startswith("1."):
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-DEFAULT_DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/postgres"
+DEFAULT_DATABASE_URL = "https://nwbrneewouimllauhvfx.supabase.co"
 
 
 class Settings(BaseSettings):
