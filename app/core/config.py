@@ -1,7 +1,7 @@
 from functools import lru_cache
 from urllib.parse import quote_plus, urlparse
 
-from pydantic import EmailStr, model_validator
+from pydantic import EmailStr, model_validator,Field
 from pydantic.version import VERSION
 
 if VERSION.startswith("1."):
@@ -19,9 +19,12 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     app_name: str = "fastapi-starter-kit"
+    supabase_url: str = Field(..., env="SUPABASE_URL")
+    supabase_service_key: str = Field(..., env="SUPABASE_SERVICE_KEY")
+    supabase_proxy: str | None = Field(None, env="SUPABASE_PROXY")
     database_url: str | None = None
-    supabase_url: str | None = None
-    supabase_service_key: str | None = None
+    # supabase_url: str | None = None
+    # supabase_service_key: str | None = None
     supabase_db_password: str | None = None
     secret_key: str = "change-me"
     algorithm: str = "HS256"

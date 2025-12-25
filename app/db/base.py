@@ -1,34 +1,42 @@
-import logging
+from typing import Generator
 
-from fastapi import HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import declarative_base, sessionmaker
+import httpx
+from supabase import Client, ClientOptions, create_client
 
-from app.core.config import get_settings
+from ..core.config import get_settings
 
-settings = get_settings()
-logger = logging.getLogger(__name__)
+_supabase_client: Client | None = None
 
 
-def _create_engine(database_url: str):
-    return create_async_engine(database_url, echo=False, future=True)
+def _initialize_client() -> Client:
+    settings = get_settings()
+    client_options = ClientOptions()
+
+    if settings.supabase_proxy:
+        http_client = httpx.Client(proxy=settings.supabase_proxy)
+        client_options.httpx_client = http_client
+
+    return create_client(
+        settings.supabase_url,
+        settings.supabase_service_key,
+        options=client_options,
+    )
 
 
-engine = _create_engine(settings.database_url)
+def get_supabase_client() -> Generator[Client, None, None]:
+    """Dependency that yields a Supabase client instance."""
 
-AsyncSessionLocal = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+    global _supabase_client
+    if _supabase_client is None:
+        _supabase_client = _initialize_client()
+    yield _supabase_client
 
-Base = declarative_base()
 
+def verify_epictwin_connection(client: Client) -> dict:
+    """Run a lightweight query against the epictwin table to confirm connectivity."""
 
-async def get_session() -> AsyncSession:
-    async with AsyncSessionLocal() as session:
-        try:
-            yield session
-        except (SQLAlchemyError, OSError) as exc:
-            logger.exception("Database session failed")
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="The database is unavailable. Verify DATABASE_URL or Supabase settings.",
-            ) from exc
+    response = client.table("epictwin").select("*").limit(1).execute()
+    return {
+        "table": "epictwin",
+        "row_count": len(response.data or []),
+    }
