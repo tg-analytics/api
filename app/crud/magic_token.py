@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from supabase import Client
+from postgrest.exceptions import APIError
 
 
 async def create_magic_token(
@@ -19,10 +20,21 @@ async def create_magic_token(
         "email": email,
         "token": token,
         "expires_at": expires_at.isoformat(),
-        "user_id": user_id,
     }
+
+    if user_id:
+        token_data["user_id"] = user_id
     
-    response = client.table("magic_tokens").insert(token_data).execute()
+    try:
+        response = client.table("magic_tokens").insert(token_data).execute()
+    except APIError as exc:
+        # If the user_id violates a foreign key constraint (e.g., legacy data mismatch),
+        # retry without the reference so sign-in isn't blocked for existing users.
+        if "magic_tokens_user_id_fkey" in getattr(exc, "message", ""):
+            token_data.pop("user_id", None)
+            response = client.table("magic_tokens").insert(token_data).execute()
+        else:
+            raise
     
     if not response.data or len(response.data) == 0:
         raise ValueError("Failed to create magic token")
