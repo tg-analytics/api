@@ -89,12 +89,19 @@ class Settings(BaseSettings):
         return f"postgresql+asyncpg://postgres:{quote_plus(password)}@{db_host}:5432/postgres"
 
     def _validate_database_url(self, database_url: str) -> None:
-        parsed_scheme = urlparse(database_url).scheme
+        parsed = urlparse(database_url)
+        parsed_scheme = parsed.scheme
 
         if parsed_scheme in {"http", "https"}:
             raise ValueError(
                 "DATABASE_URL looks like an HTTP(S) URL. For Supabase, set SUPABASE_URL and "
                 "SUPABASE_DB_PASSWORD (or SUPABASE_SERVICE_KEY). Otherwise, provide a Postgres connection string."
+            )
+
+        if parsed_scheme.startswith("postgres") and not parsed.hostname:
+            raise ValueError(
+                "DATABASE_URL is missing a hostname. Ensure your connection string includes a host, e.g. "
+                "'postgresql+asyncpg://user:password@localhost:5432/dbname'."
             )
 
 
