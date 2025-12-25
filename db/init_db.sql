@@ -37,6 +37,7 @@ CREATE TABLE team_members (
   role user_role NOT NULL DEFAULT 'admin',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  joined_at TIMESTAMPTZ,
   deleted_at TIMESTAMPTZ,
   deleted_by UUID REFERENCES users(id) ON DELETE SET NULL,
   UNIQUE (account_id, user_id)
