@@ -11,7 +11,10 @@ async def create_magic_token(
     expires_at: datetime,
     user_id: str | None = None,
 ) -> dict:
-    """Create a magic token in Supabase."""
+    """Create a magic token in Supabase. Deletes any existing tokens for the email first."""
+    # Delete any existing tokens for this email to avoid unique constraint violation
+    await delete_magic_tokens_by_email(client, email)
+    
     token_data = {
         "email": email,
         "token": token,
@@ -64,6 +67,18 @@ async def mark_magic_token_used(client: Client, token: str) -> dict | None:
     return None
 
 
+async def delete_magic_token(client: Client, token: str) -> bool:
+    """Delete a specific magic token from Supabase."""
+    response = client.table("magic_tokens").delete().eq("token", token).execute()
+    return response.data is not None and len(response.data) > 0
+
+
+async def delete_magic_tokens_by_email(client: Client, email: str) -> int:
+    """Delete all magic tokens for an email from Supabase."""
+    response = client.table("magic_tokens").delete().eq("email", email).execute()
+    return len(response.data) if response.data else 0
+
+
 async def delete_expired_tokens(client: Client) -> int:
     """Delete expired magic tokens from Supabase."""
     now = datetime.utcnow().isoformat()
@@ -71,4 +86,3 @@ async def delete_expired_tokens(client: Client) -> int:
     response = client.table("magic_tokens").delete().lt("expires_at", now).execute()
     
     return len(response.data) if response.data else 0
-    
