@@ -36,6 +36,7 @@ uvicorn app.main:app --reload
 
 ### Endpoints
 
+- `GET /ping` — public health check
 - `GET /public/ping` — health check
 - `POST /auth/register` — create user
 - `POST /auth/token` — obtain JWT access token
