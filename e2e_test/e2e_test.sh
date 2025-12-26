@@ -29,6 +29,7 @@ CUSTOMER1_FIRST_NAME=""
 CUSTOMER1_ACCESS_TOKEN=""
 MAGIC_TOKEN=""
 NOTIFICATION_ID=""
+TEAM_MEMBER_ID=""
 
 # Counters
 TOTAL_TESTS=0
@@ -479,6 +480,70 @@ test_step_12_get_team_members() {
         print_error "Team member name does not contain first name (Expected: *$CUSTOMER1_FIRST_NAME*, Got: $team_member_name)"
         exit 1
     fi
+
+    TEAM_MEMBER_ID=$(jq -r '.[0].id' tmp_team_members.json)
+    print_debug "Saved team member ID: $TEAM_MEMBER_ID"
+    
+    print_test_success
+}
+
+# Step 13: Get Team Member by ID
+test_step_13_get_team_member_by_id() {
+    print_step "Get Team Member by ID"
+    
+    local request="curl -s -w '%{http_code}' -o tmp_team_member_by_id.json -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/team_members/$TEAM_MEMBER_ID'"
+    print_debug_request "$request"
+    
+    local response=$(curl -s -w "%{http_code}" -o tmp_team_member_by_id.json \
+        -H "Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN" \
+        "$API_URL/team_members/$TEAM_MEMBER_ID")
+    print_debug_response "$response" "tmp_team_member_by_id.json"
+    
+    check_response "$response" "200" "Get team member by ID"
+    validate_json_field "tmp_team_member_by_id.json" ".id" "$TEAM_MEMBER_ID" "Member ID"
+    validate_json_field "tmp_team_member_by_id.json" ".role" "owner" "Member role"
+    validate_json_field "tmp_team_member_by_id.json" ".status" "accepted" "Member status"
+    validate_json_field "tmp_team_member_by_id.json" ".name" "$CUSTOMER1_FIRST_NAME" "Member name"
+    
+    print_test_success
+}
+
+# Step 14: Try to Update Team Member (Should Fail)
+test_step_14_update_team_member() {
+    print_step "Try to Update Team Member (Should Fail)"
+    
+    local request="curl -s -w '%{http_code}' -o tmp_update_team_member.json -X PATCH -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' -H 'Content-Type: application/json' '$API_URL/team_members/$TEAM_MEMBER_ID' -d '{\"role\":\"admin\"}'"
+    print_debug_request "$request"
+    
+    local response=$(curl -s -w "%{http_code}" -o tmp_update_team_member.json \
+        -X PATCH \
+        -H "Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN" \
+        -H "Content-Type: application/json" \
+        "$API_URL/team_members/$TEAM_MEMBER_ID" \
+        -d '{"role":"admin"}')
+    print_debug_response "$response" "tmp_update_team_member.json"
+    
+    check_response "$response" "400" "Update team member owner role"
+    validate_json_field "tmp_update_team_member.json" ".detail" "Cannot update the account owner" "Error detail"
+    
+    print_test_success
+}
+
+# Step 15: Try to Delete Team Member (Should Fail)
+test_step_15_delete_team_member() {
+    print_step "Try to Delete Team Member (Should Fail)"
+    
+    local request="curl -s -w '%{http_code}' -o tmp_delete_team_member.json -X DELETE -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/team_members/$TEAM_MEMBER_ID'"
+    print_debug_request "$request"
+    
+    local response=$(curl -s -w "%{http_code}" -o tmp_delete_team_member.json \
+        -X DELETE \
+        -H "Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN" \
+        "$API_URL/team_members/$TEAM_MEMBER_ID")
+    print_debug_response "$response" "tmp_delete_team_member.json"
+    
+    check_response "$response" "400" "Delete team member owner"
+    validate_json_field "tmp_delete_team_member.json" ".detail" "Cannot remove the account owner" "Error detail"
     
     print_test_success
 }
@@ -541,6 +606,9 @@ main() {
     test_step_10_get_notifications_again
     test_step_11_get_notification_by_id
     test_step_12_get_team_members
+    test_step_13_get_team_member_by_id
+    test_step_14_update_team_member
+    test_step_15_delete_team_member
     
     # Print Summary
     print_header "TEST SUMMARY"
