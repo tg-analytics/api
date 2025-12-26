@@ -26,3 +26,10 @@ class NotificationResponse(BaseModel):
     is_read: bool
     read_at: datetime | None
     created_at: datetime
+
+
+class NotificationListResponse(BaseModel):
+    """Response schema for paginated notification results."""
+
+    items: list[NotificationResponse]
+    next_cursor: str | None
