@@ -105,6 +105,14 @@ async def confirm_magic_link(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="This magic link has already been used"
             )
+
+        # Ensure the token belongs to the provided email
+        token_email = magic_token["email"]
+        if token_email.lower() != payload.email.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Token does not match the provided email"
+            )
         
         # Check if token has expired
         expires_at = datetime.fromisoformat(magic_token["expires_at"].replace("Z", "+00:00"))
@@ -116,7 +124,7 @@ async def confirm_magic_link(
                 detail="This magic link has expired"
             )
         
-        email = magic_token["email"]
+        email = token_email
         
         # Check if user exists
         user = await get_user_by_email(client, email)

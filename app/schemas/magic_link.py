@@ -13,4 +13,5 @@ class MagicLinkResponse(BaseModel):
 
 
 class MagicLinkConfirm(BaseModel):
+    email: EmailStr
     token: str

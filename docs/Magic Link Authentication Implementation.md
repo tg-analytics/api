@@ -88,7 +88,7 @@ Verify the magic link token and authenticate the user.
 ### Token Mismatch
 ```json
 {
-  "detail": "Token does not match email"
+  "detail": "Token does not match the provided email"
 }
 ```
 
