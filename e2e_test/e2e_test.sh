@@ -462,12 +462,14 @@ test_step_10_get_notifications() {
     print_debug_response "$response" "tmp_notifications.json"
     
     check_response "$response" "200" "Get notifications"
-    validate_json_field "tmp_notifications.json" ".[0].subject" "Welcome to fastapi-starter-kit!" "Notification subject"
-    validate_json_field "tmp_notifications.json" ".[0].body" "Thanks for joining fastapi-starter-kit! We're glad you're here." "Notification body"
-    validate_json_field "tmp_notifications.json" ".[0].type" "welcome" "Notification type"
-    validate_boolean "tmp_notifications.json" ".[0].is_read" "false" "Is read status"
+    validate_json_field "tmp_notifications.json" ".items | length" "1" "Notifications count"
+    validate_json_field "tmp_notifications.json" ".items[0].subject" "Welcome to fastapi-starter-kit!" "Notification subject"
+    validate_json_field "tmp_notifications.json" ".items[0].body" "Thanks for joining fastapi-starter-kit! We're glad you're here." "Notification body"
+    validate_json_field "tmp_notifications.json" ".items[0].type" "welcome" "Notification type"
+    validate_boolean "tmp_notifications.json" ".items[0].is_read" "false" "Is read status"
+    validate_json_field "tmp_notifications.json" ".next_cursor" "null" "Next cursor is null"
     
-    NOTIFICATION_ID=$(jq -r '.[0].id' tmp_notifications.json)
+    NOTIFICATION_ID=$(jq -r '.items[0].id' tmp_notifications.json)
     print_debug "Saved notification ID: $NOTIFICATION_ID"
     
     print_test_success
@@ -506,10 +508,12 @@ test_step_12_get_notifications_again() {
     print_debug_response "$response" "tmp_notifications_again.json"
     
     check_response "$response" "200" "Get notifications again"
-    validate_json_field "tmp_notifications_again.json" ".[0].subject" "Welcome to fastapi-starter-kit!" "Notification subject"
-    validate_json_field "tmp_notifications_again.json" ".[0].body" "Thanks for joining fastapi-starter-kit! We're glad you're here." "Notification body"
-    validate_json_field "tmp_notifications_again.json" ".[0].type" "welcome" "Notification type"
-    validate_boolean "tmp_notifications_again.json" ".[0].is_read" "true" "Is read status"
+    validate_json_field "tmp_notifications_again.json" ".items | length" "1" "Notifications count"
+    validate_json_field "tmp_notifications_again.json" ".items[0].subject" "Welcome to fastapi-starter-kit!" "Notification subject"
+    validate_json_field "tmp_notifications_again.json" ".items[0].body" "Thanks for joining fastapi-starter-kit! We're glad you're here." "Notification body"
+    validate_json_field "tmp_notifications_again.json" ".items[0].type" "welcome" "Notification type"
+    validate_boolean "tmp_notifications_again.json" ".items[0].is_read" "true" "Is read status"
+    validate_json_field "tmp_notifications_again.json" ".next_cursor" "null" "Next cursor is null"
     
     print_test_success
 }
@@ -775,14 +779,14 @@ test_step_24_get_notifications_after_invite_acceptance() {
     print_debug_response "$response" "tmp_notifications_after_acceptance.json"
 
     check_response "$response" "200" "Get notifications after invite acceptance"
-    validate_array_length "tmp_notifications_after_acceptance.json" "2" "Notifications count after invite acceptance"
-    validate_json_field "tmp_notifications_after_acceptance.json" "sort_by(.created_at) | reverse | .[0].subject" "microsaas.farm+1 accepted your invitation to fastapi-starter-kit" "Latest notification subject after invite acceptance"
-    validate_json_field "tmp_notifications_after_acceptance.json" "sort_by(.created_at) | reverse | .[0].body" "microsaas.farm+1 (microsaas.farm+1@gmail.com) accepted your invitation to join microsaas.farm's Account on fastapi-starter-kit." "Latest notification body after invite acceptance"
-    validate_json_field "tmp_notifications_after_acceptance.json" "sort_by(.created_at) | reverse | .[0].type" "invite_accepted" "Latest notification type after invite acceptance"
-    validate_boolean "tmp_notifications_after_acceptance.json" "sort_by(.created_at) | reverse | .[0].is_read" "false" "Latest notification is unread after invite acceptance"
-    validate_json_not_null "tmp_notifications_after_acceptance.json" "sort_by(.created_at) | reverse | .[0].id" "Invite accepted notification id"
+    validate_json_field "tmp_notifications_after_acceptance.json" ".items | length" "2" "Notifications count after invite acceptance"
+    validate_json_field "tmp_notifications_after_acceptance.json" ".items | sort_by(.created_at) | reverse | .[0].subject" "microsaas.farm+1 accepted your invitation to fastapi-starter-kit" "Latest notification subject after invite acceptance"
+    validate_json_field "tmp_notifications_after_acceptance.json" ".items | sort_by(.created_at) | reverse | .[0].body" "microsaas.farm+1 (microsaas.farm+1@gmail.com) accepted your invitation to join microsaas.farm's Account on fastapi-starter-kit." "Latest notification body after invite acceptance"
+    validate_json_field "tmp_notifications_after_acceptance.json" ".items | sort_by(.created_at) | reverse | .[0].type" "invite_accepted" "Latest notification type after invite acceptance"
+    validate_boolean "tmp_notifications_after_acceptance.json" ".items | sort_by(.created_at) | reverse | .[0].is_read" "false" "Latest notification is unread after invite acceptance"
+    validate_json_not_null "tmp_notifications_after_acceptance.json" ".items | sort_by(.created_at) | reverse | .[0].id" "Invite accepted notification id"
 
-    INVITE_ACCEPTED_NOTIFICATION_ID=$(jq -r 'sort_by(.created_at) | reverse | .[0].id' tmp_notifications_after_acceptance.json)
+    INVITE_ACCEPTED_NOTIFICATION_ID=$(jq -r '.items | sort_by(.created_at) | reverse | .[0].id' tmp_notifications_after_acceptance.json)
     print_debug "Saved invite accepted notification ID: $INVITE_ACCEPTED_NOTIFICATION_ID"
 
     print_test_success
@@ -927,8 +931,8 @@ test_step_30_get_notifications_after_mark_read() {
     print_debug_response "$response" "tmp_notifications_after_read.json"
 
     check_response "$response" "200" "Get notifications after marking invite acceptance as read"
-    validate_array_length "tmp_notifications_after_read.json" "2" "Notifications count after marking invite acceptance as read"
-    validate_boolean "tmp_notifications_after_read.json" "map(select(.id==\"$INVITE_ACCEPTED_NOTIFICATION_ID\")) | .[0].is_read" "true" "Invite accepted notification is read in list"
+    validate_json_field "tmp_notifications_after_read.json" ".items | length" "2" "Notifications count after marking invite acceptance as read"
+    validate_boolean "tmp_notifications_after_read.json" ".items | map(select(.id==\"$INVITE_ACCEPTED_NOTIFICATION_ID\")) | .[0].is_read" "true" "Invite accepted notification is read in list"
 
     print_test_success
 }
