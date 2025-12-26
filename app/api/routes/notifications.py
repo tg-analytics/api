@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from supabase import Client
 
 from app.api import deps
@@ -9,19 +9,39 @@ from app.crud.notification import (
     mark_notification_as_read,
 )
 from app.db.base import get_supabase
-from app.schemas.notification import NotificationResponse
+from app.schemas.notification import NotificationListResponse, NotificationResponse
 
 router = APIRouter(prefix="/v1.0/notifications", tags=["notifications"])
 
 
-@router.get("", response_model=list[NotificationResponse])
+@router.get("", response_model=NotificationListResponse)
 async def list_notifications(
+    is_read: bool | None = Query(None, description="Filter by read status"),
+    limit: int = Query(20, ge=1, le=100, description="Number of results to return"),
+    cursor: str
+    | None = Query(None, description="Pagination cursor for infinite scroll behavior"),
     current_user: dict = Depends(deps.get_current_user),
     client: Client = Depends(get_supabase),
-) -> list[NotificationResponse]:
+) -> NotificationListResponse:
     """List notifications for the current user."""
-    notifications = await get_user_notifications(client, current_user["id"])
-    return [NotificationResponse(**notification) for notification in notifications]
+    try:
+        result = await get_user_notifications(
+            client,
+            current_user["id"],
+            is_read=is_read,
+            limit=limit,
+            cursor=cursor,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    return NotificationListResponse(
+        items=[NotificationResponse(**notification) for notification in result["items"]],
+        next_cursor=result["next_cursor"],
+    )
 
 
 @router.get("/{notification_id}", response_model=NotificationResponse)

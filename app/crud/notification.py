@@ -1,8 +1,43 @@
+import json
+from base64 import urlsafe_b64decode, urlsafe_b64encode
 from datetime import UTC, datetime
+from typing import Any
 
 from supabase import Client
 
 from app.schemas.notification import NotificationType
+
+
+def _encode_cursor(created_at: str | datetime, notification_id: str) -> str:
+    """Encode pagination cursor payload for notifications."""
+
+    created_at_value = (
+        created_at.isoformat() if isinstance(created_at, datetime) else str(created_at)
+    )
+
+    payload = {"created_at": created_at_value, "id": notification_id}
+    raw = json.dumps(payload).encode("utf-8")
+    return urlsafe_b64encode(raw).decode("utf-8")
+
+
+def _decode_cursor(cursor: str) -> dict[str, Any]:
+    """Decode a pagination cursor string.
+
+    Raises:
+        ValueError: If the cursor cannot be decoded or is missing expected
+            fields.
+    """
+
+    try:
+        raw = urlsafe_b64decode(cursor).decode("utf-8")
+        payload = json.loads(raw)
+    except Exception as exc:  # noqa: BLE001 - intentional broad catch for decoding errors
+        raise ValueError("Invalid pagination cursor") from exc
+
+    if not isinstance(payload, dict) or not {"created_at", "id"}.issubset(payload):
+        raise ValueError("Invalid pagination cursor")
+
+    return payload
 
 
 async def create_notification(
@@ -56,18 +91,46 @@ async def get_user_notification_by_subject(
     return None
 
 
-async def get_user_notifications(client: Client, user_id: str) -> list[dict]:
-    """Get all non-deleted notifications for a user ordered by newest first."""
-    response = (
+async def get_user_notifications(
+    client: Client,
+    user_id: str,
+    *,
+    is_read: bool | None = None,
+    limit: int = 20,
+    cursor: str | None = None,
+) -> dict:
+    """Get notifications for a user ordered by newest first with pagination."""
+    query = (
         client.table("notifications")
         .select("*")
         .eq("user_id", user_id)
         .is_("deleted_at", "null")
-        .order("created_at", desc=True)
-        .execute()
     )
 
-    return response.data or []
+    if is_read is not None:
+        query = query.eq("is_read", is_read)
+
+    if cursor:
+        payload = _decode_cursor(cursor)
+        created_at = str(payload["created_at"])
+        notification_id = str(payload["id"])
+        condition = (
+            f"and(created_at.eq.{created_at},id.lt.{notification_id}),"
+            f"created_at.lt.{created_at}"
+        )
+        query = query.or_(condition)
+
+    query = query.order("created_at", desc=True).order("id", desc=True).limit(limit + 1)
+
+    response = query.execute()
+    notifications = response.data or []
+
+    next_cursor = None
+    if len(notifications) > limit:
+        last_item = notifications[limit - 1]
+        next_cursor = _encode_cursor(last_item["created_at"], last_item["id"])
+
+    return {"items": notifications[:limit], "next_cursor": next_cursor}
 
 
 async def get_user_notification_by_id(
