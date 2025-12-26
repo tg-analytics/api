@@ -112,7 +112,6 @@ async def mark_notification_as_read(client: Client, *, notification_id: str, use
         .eq("id", notification_id)
         .eq("user_id", user_id)
         .is_("deleted_at", "null")
-        .limit(1)
         .execute()
     )
 
