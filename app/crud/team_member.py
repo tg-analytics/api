@@ -1,4 +1,46 @@
+import json
+from base64 import urlsafe_b64decode, urlsafe_b64encode
+from datetime import datetime
+from typing import Any
+
 from supabase import Client
+
+
+def _encode_cursor(created_at: str | datetime, member_id: str) -> str:
+    """Encode pagination cursor payload.
+
+    The cursor stores the last item's creation timestamp and ID so we can
+    continue pagination deterministically even when multiple rows share the
+    same timestamp.
+    """
+
+    created_at_value = (
+        created_at.isoformat() if isinstance(created_at, datetime) else str(created_at)
+    )
+
+    payload = {"created_at": created_at_value, "id": member_id}
+    raw = json.dumps(payload).encode("utf-8")
+    return urlsafe_b64encode(raw).decode("utf-8")
+
+
+def _decode_cursor(cursor: str) -> dict[str, Any]:
+    """Decode a pagination cursor string.
+
+    Raises:
+        ValueError: If the cursor cannot be decoded or is missing expected
+            fields.
+    """
+
+    try:
+        raw = urlsafe_b64decode(cursor).decode("utf-8")
+        payload = json.loads(raw)
+    except Exception as exc:  # noqa: BLE001 - intentional broad catch for decoding errors
+        raise ValueError("Invalid pagination cursor") from exc
+
+    if not isinstance(payload, dict) or not {"created_at", "id"}.issubset(payload):
+        raise ValueError("Invalid pagination cursor")
+
+    return payload
 
 
 async def get_user_default_account_id(client: Client, user_id: str) -> str | None:
@@ -34,36 +76,68 @@ async def get_user_default_account_id(client: Client, user_id: str) -> str | Non
     return None
 
 
-async def get_team_members_by_account(client: Client, account_id: str) -> list[dict]:
-    """Get all team members for an account with user details."""
+async def get_team_members_by_account(
+    client: Client,
+    account_id: str,
+    *,
+    statuses: list[str] | None = None,
+    limit: int = 20,
+    cursor: str | None = None,
+) -> dict:
+    """Get team members for an account with optional filtering and pagination."""
     # Use the specific foreign key relationship to avoid ambiguity
-    response = (
+    query = (
         client.table("team_members")
-        .select("id, role, status, user_id, created_at, users!team_members_user_id_fkey(first_name, last_name)")
+        .select(
+            "id, role, status, user_id, created_at, users!team_members_user_id_fkey(first_name, last_name)"
+        )
         .eq("account_id", account_id)
         .is_("deleted_at", "null")
-        .execute()
     )
-    
+
+    if statuses:
+        normalized_statuses = [status.lower() for status in statuses]
+        query = query.in_("status", normalized_statuses)
+
+    if cursor:
+        payload = _decode_cursor(cursor)
+        created_at = str(payload["created_at"])
+        member_id = str(payload["id"])
+        condition = (
+            f"and(created_at.eq.{created_at},id.lt.{member_id}),created_at.lt.{created_at}"
+        )
+        query = query.or_(condition)
+
+    query = query.order("created_at", desc=True).order("id", desc=True).limit(limit + 1)
+
+    response = query.execute()
+
     members = []
-    for member in response.data:
+    for member in response.data[:limit]:
         user_name = None
         if member.get("users") and isinstance(member["users"], dict):
             # Combine first and last name if available
             first_name = member["users"].get("first_name") or ""
             last_name = member["users"].get("last_name") or ""
             user_name = f"{first_name} {last_name}".strip() or None
-        
-        members.append({
-            "id": member["id"],
-            "role": member["role"],
-            "status": member["status"],
-            "user_id": member["user_id"],
-            "name": user_name,
-            "joined_at": member["created_at"]
-        })
-    
-    return members
+
+        members.append(
+            {
+                "id": member["id"],
+                "role": member["role"],
+                "status": member["status"],
+                "user_id": member["user_id"],
+                "name": user_name,
+                "joined_at": member["created_at"],
+            }
+        )
+
+    next_cursor = None
+    if len(response.data) > limit:
+        last_item = response.data[limit - 1]
+        next_cursor = _encode_cursor(last_item["created_at"], last_item["id"])
+
+    return {"items": members, "next_cursor": next_cursor}
 
 
 async def check_team_member_exists(client: Client, account_id: str, user_id: str) -> dict | None:
