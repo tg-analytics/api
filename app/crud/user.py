@@ -2,6 +2,7 @@ from supabase import Client
 
 from app.schemas.user import UserCreate
 from app.services.password import get_password_hash, verify_password
+from app.crud.team_member import get_user_default_account_id
 
 
 async def get_user_by_email(client: Client, email: str) -> dict | None:
@@ -28,27 +29,9 @@ async def get_user_with_default_account(client: Client, user_id: str) -> dict | 
     user = await get_user_by_id(client, user_id)
     if not user:
         return None
-    
-    # Get default account created by the user
-    account_response = client.table("accounts").select("id").eq("created_by", user_id).eq("is_default", True).limit(1).execute()
-    
-    default_account_id = None
-    if account_response.data and len(account_response.data) > 0:
-        default_account_id = account_response.data[0]["id"]
-    else:
-        # If user doesn't own a default account, check their team membership
-        team_member_response = (
-            client.table("team_members")
-            .select("account_id")
-            .eq("user_id", user_id)
-            .is_("deleted_at", "null")
-            .limit(1)
-            .execute()
-        )
 
-        if team_member_response.data and len(team_member_response.data) > 0:
-            default_account_id = team_member_response.data[0]["account_id"]
-    
+    default_account_id = await get_user_default_account_id(client, user_id)
+
     return {
         "email": user["email"],
         "first_name": user.get("first_name"),

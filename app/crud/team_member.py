@@ -2,11 +2,34 @@ from supabase import Client
 
 
 async def get_user_default_account_id(client: Client, user_id: str) -> str | None:
-    """Get the default account ID for a user."""
-    response = client.table("accounts").select("id").eq("created_by", user_id).eq("is_default", True).limit(1).execute()
+    """Get the default account ID for a user.
+
+    Falls back to the first active team membership if the user doesn't own a
+    default account. This matches the logic used by the `/users/me` endpoint.
+    """
+    response = (
+        client.table("accounts")
+        .select("id")
+        .eq("created_by", user_id)
+        .eq("is_default", True)
+        .limit(1)
+        .execute()
+    )
     
     if response.data and len(response.data) > 0:
         return response.data[0]["id"]
+
+    team_member_response = (
+        client.table("team_members")
+        .select("account_id")
+        .eq("user_id", user_id)
+        .is_("deleted_at", "null")
+        .limit(1)
+        .execute()
+    )
+
+    if team_member_response.data and len(team_member_response.data) > 0:
+        return team_member_response.data[0]["account_id"]
     return None
 
 
