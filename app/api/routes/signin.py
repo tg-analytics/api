@@ -16,6 +16,7 @@ from app.services.resend import (
     send_welcome_email,
 )
 from app.schemas.magic_link import MagicLinkRequest, MagicLinkResponse, MagicLinkConfirm
+from app.schemas.notification import NotificationType
 from app.core.security import create_access_token
 from app.core.config import get_settings
 
@@ -198,6 +199,9 @@ async def confirm_magic_link(
                 user_id=user["id"],
                 subject=subject,
                 body=body,
+                notification_type=NotificationType.WELCOME,
+                details=body,
+                cta=None,
             )
 
             try:
@@ -230,6 +234,9 @@ async def confirm_magic_link(
                     user_id=user["id"],
                     subject=welcome_subject,
                     body=body,
+                    notification_type=NotificationType.WELCOME,
+                    details=body,
+                    cta=None,
                 )
 
                 try:

@@ -1,6 +1,15 @@
 from datetime import datetime
+from enum import Enum
 
 from pydantic import BaseModel
+
+
+class NotificationType(str, Enum):
+    """Supported notification types."""
+
+    WELCOME = "welcome"
+    NEWS = "news"
+    UPDATES = "updates"
 
 
 class NotificationResponse(BaseModel):
@@ -10,6 +19,9 @@ class NotificationResponse(BaseModel):
     user_id: str
     subject: str
     body: str
+    type: NotificationType
+    details: str | None = None
+    cta: str | None = None
     is_read: bool
     read_at: datetime | None
     created_at: datetime

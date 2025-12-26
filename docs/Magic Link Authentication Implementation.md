@@ -16,7 +16,8 @@ Run the SQL migration script to create the required tables:
 
 ```bash
 # Execute the migration in your Supabase SQL editor
-# or via CLI:
+# or via CLI. This also syncs recent changes such as the notification_type enum
+# and notification details/cta columns:
 supabase db push
 ```
 
