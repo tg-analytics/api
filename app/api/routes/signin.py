@@ -91,6 +91,7 @@ async def confirm_magic_link(
     try:
         settings = get_settings()
         welcome_subject = f"Welcome to {settings.app_name}!"
+        membership_status: str | None = None
         # Get the magic token
         magic_token = await get_magic_token_by_token(client, payload.token)
         
@@ -175,6 +176,7 @@ async def confirm_magic_link(
                 "account_id": account_id,
                 "user_id": user_id,
                 "role": "owner",
+                "status": "accepted",
                 "created_by": user_id,
             }
             team_member_response = client.table("team_members").insert(team_member_data).execute()
@@ -186,6 +188,7 @@ async def confirm_magic_link(
                 )
             
             new_user_created = True
+            membership_status = "accepted"
         
         if new_user_created:
             subject = welcome_subject
@@ -254,6 +257,30 @@ async def confirm_magic_link(
                         status_code=status.HTTP_502_BAD_GATEWAY,
                         detail=str(exc),
                     ) from exc
+            invited_memberships = (
+                client.table("team_members")
+                .select("id, status")
+                .eq("user_id", user["id"])
+                .is_("deleted_at", "null")
+                .execute()
+            )
+
+            has_invited_membership = False
+            has_rejected_membership = False
+
+            if invited_memberships.data:
+                for membership in invited_memberships.data:
+                    status_value = membership.get("status")
+                    if status_value == "invited":
+                        has_invited_membership = True
+                    if status_value == "rejected":
+                        has_rejected_membership = True
+
+            if has_invited_membership:
+                client.table("team_members").update({"status": "accepted"}).eq("user_id", user["id"]).eq("status", "invited").is_("deleted_at", "null").execute()
+                membership_status = "accepted"
+            elif has_rejected_membership:
+                membership_status = "rejected"
         
         # Delete the magic token after successful confirmation
         await delete_magic_token(client, payload.token)
@@ -272,6 +299,7 @@ async def confirm_magic_link(
                 "id": user["id"],
                 "email": user["email"],
                 "name": user.get("first_name"),
+                "team_member_status": membership_status,
             }
         }
     

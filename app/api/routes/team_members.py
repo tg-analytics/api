@@ -53,10 +53,15 @@ async def invite_team_member(
     
     # If user exists, check if already a team member
     if invited_user:
-        exists = await check_team_member_exists(
+        existing_member = await check_team_member_exists(
             client, account_id, invited_user["id"]
         )
-        if exists:
+        if existing_member:
+            if existing_member.get("status") == "rejected":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="User has already rejected an invitation",
+                )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User is already a team member"
@@ -69,6 +74,7 @@ async def invite_team_member(
             user_id=invited_user["id"],
             inviter_id=current_user["id"],
             role=payload.role,
+            status="invited",
         )
     else:
         # User doesn't exist, create user and send magic link for sign-up
@@ -91,6 +97,7 @@ async def invite_team_member(
             user_id=invited_user["id"],
             inviter_id=current_user["id"],
             role=payload.role,
+            status="invited",
         )
         
         # Send invitation email with magic link
@@ -108,7 +115,8 @@ async def invite_team_member(
     return {
         "message": "Invitation sent successfully",
         "email": payload.email,
-        "user_exists": invited_user is not None
+        "user_exists": invited_user is not None,
+        "status": "invited",
     }
 
 
@@ -158,6 +166,7 @@ async def get_team_member(
     return TeamMemberResponse(
         id=member["id"],
         role=member["role"],
+        status=member["status"],
         user_id=member["user_id"],
         name=member["name"],
         joined_at=member["joined_at"],
@@ -171,7 +180,7 @@ async def update_team_member_role(
     current_user: dict = Depends(deps.get_current_user),
     client: Client = Depends(get_supabase),
 ) -> dict:
-    """Update a team member's role."""
+    """Update a team member's role or status."""
     # Check if team member exists
     member = await get_team_member_by_id(client, member_id)
     
@@ -201,6 +210,15 @@ async def update_team_member_role(
     update_data = {}
     if payload.role:
         update_data["role"] = payload.role
+    if payload.status is not None:
+        allowed_statuses = {"invited", "accepted", "rejected"}
+        normalized_status = payload.status.lower()
+        if normalized_status not in allowed_statuses:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid status value"
+            )
+        update_data["status"] = normalized_status
     
     if not update_data:
         raise HTTPException(
@@ -220,7 +238,8 @@ async def update_team_member_role(
     return {
         "message": "Team member updated successfully",
         "id": member_id,
-        "role": updated_member.get("role")
+        "role": updated_member.get("role"),
+        "status": updated_member.get("status"),
     }
 
 

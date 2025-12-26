@@ -1,6 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TYPE user_role AS ENUM ('owner', 'admin');
+CREATE TYPE team_member_status AS ENUM ('invited', 'accepted', 'rejected');
 CREATE TYPE notification_type AS ENUM ('welcome', 'news', 'updates');
 
 -- Core tables ---------------------------------------------------------------
@@ -36,6 +37,7 @@ CREATE TABLE team_members (
   account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   role user_role NOT NULL DEFAULT 'admin',
+  status team_member_status NOT NULL DEFAULT 'accepted',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_by UUID REFERENCES users(id) ON DELETE SET NULL,
   joined_at TIMESTAMPTZ,

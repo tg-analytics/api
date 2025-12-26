@@ -23,6 +23,7 @@ async def get_user_default_account_id(client: Client, user_id: str) -> str | Non
         client.table("team_members")
         .select("account_id")
         .eq("user_id", user_id)
+        .eq("status", "accepted")
         .is_("deleted_at", "null")
         .limit(1)
         .execute()
@@ -38,7 +39,7 @@ async def get_team_members_by_account(client: Client, account_id: str) -> list[d
     # Use the specific foreign key relationship to avoid ambiguity
     response = (
         client.table("team_members")
-        .select("id, role, user_id, created_at, users!team_members_user_id_fkey(first_name, last_name)")
+        .select("id, role, status, user_id, created_at, users!team_members_user_id_fkey(first_name, last_name)")
         .eq("account_id", account_id)
         .is_("deleted_at", "null")
         .execute()
@@ -56,6 +57,7 @@ async def get_team_members_by_account(client: Client, account_id: str) -> list[d
         members.append({
             "id": member["id"],
             "role": member["role"],
+            "status": member["status"],
             "user_id": member["user_id"],
             "name": user_name,
             "joined_at": member["created_at"]
@@ -64,11 +66,11 @@ async def get_team_members_by_account(client: Client, account_id: str) -> list[d
     return members
 
 
-async def check_team_member_exists(client: Client, account_id: str, user_id: str) -> bool:
+async def check_team_member_exists(client: Client, account_id: str, user_id: str) -> dict | None:
     """Check if a team member already exists."""
     response = (
         client.table("team_members")
-        .select("id")
+        .select("*")
         .eq("account_id", account_id)
         .eq("user_id", user_id)
         .is_("deleted_at", "null")
@@ -76,7 +78,9 @@ async def check_team_member_exists(client: Client, account_id: str, user_id: str
         .execute()
     )
     
-    return response.data and len(response.data) > 0
+    if response.data and len(response.data) > 0:
+        return response.data[0]
+    return None
 
 
 async def create_team_member(
@@ -84,13 +88,16 @@ async def create_team_member(
     account_id: str,
     user_id: str,
     inviter_id: str,
-    role: str = "admin"
+    role: str = "admin",
+    status: str = "accepted",
 ) -> dict:
     """Create a new team member."""
+    normalized_status = status.lower() if isinstance(status, str) else status
     member_data = {
         "account_id": account_id,
         "user_id": user_id,
         "role": role,
+        "status": normalized_status,
         "created_by": inviter_id
     }
     
@@ -124,7 +131,7 @@ async def get_team_member_details(
     """Get a team member with user details by ID."""
     response = (
         client.table("team_members")
-        .select("id, role, user_id, account_id, created_at, users!team_members_user_id_fkey(first_name, last_name)")
+        .select("id, role, status, user_id, account_id, created_at, users!team_members_user_id_fkey(first_name, last_name)")
         .eq("id", member_id)
         .is_("deleted_at", "null")
         .execute()
@@ -143,6 +150,7 @@ async def get_team_member_details(
     return {
         "id": member["id"],
         "role": member["role"],
+        "status": member["status"],
         "user_id": member["user_id"],
         "account_id": member["account_id"],
         "name": user_name,
@@ -156,6 +164,9 @@ async def update_team_member(
     update_data: dict
 ) -> dict | None:
     """Update a team member."""
+    if not update_data:
+        return None
+
     response = (
         client.table("team_members")
         .update(update_data)
