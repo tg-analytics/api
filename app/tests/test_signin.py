@@ -4,9 +4,10 @@ from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import UUID
 
-from app.api.routes.signin import confirm_magic_link
-from app.schemas.magic_link import MagicLinkConfirm
+from app.api.routes.signin import confirm_magic_link, create_magic_link
+from app.schemas.magic_link import MagicLinkConfirm, MagicLinkRequest
 
 
 class FakeResponse:
@@ -102,6 +103,41 @@ class FakeSupabaseClient:
 
     def table(self, table_name: str):
         return FakeTableQuery(table_name, self.storage)
+
+
+class CreateMagicLinkTests(IsolatedAsyncioTestCase):
+    async def test_generates_and_persists_magic_link(self):
+        fake_user = {"id": "user-1", "email": "user@example.com"}
+        client = MagicMock()
+        mock_get_user = AsyncMock(return_value=fake_user)
+        mock_create_token = AsyncMock()
+        mock_send_email = AsyncMock()
+
+        token_value = "123e4567-e89b-12d3-a456-426614174000"
+
+        with patch("app.api.routes.signin.get_user_by_email", mock_get_user), patch(
+            "app.api.routes.signin.create_magic_token", mock_create_token
+        ), patch("app.api.routes.signin.send_magic_link_email", mock_send_email), patch(
+            "app.api.routes.signin.uuid4", return_value=UUID(token_value)
+        ):
+            payload = MagicLinkRequest(email="user@example.com")
+            response = await create_magic_link(payload, client=client)
+
+        self.assertEqual(response.token, token_value)
+        self.assertIsNotNone(response.expires_at)
+        self.assertGreater(response.expires_at, datetime.now(timezone.utc))
+
+        mock_get_user.assert_awaited_once_with(client, payload.email)
+        mock_create_token.assert_awaited_once()
+        _, kwargs = mock_create_token.await_args
+        self.assertEqual(kwargs["email"], payload.email)
+        self.assertEqual(kwargs["token"], token_value)
+        self.assertEqual(kwargs["user_id"], fake_user["id"])
+        self.assertEqual(kwargs["expires_at"], response.expires_at)
+
+        mock_send_email.assert_awaited_once_with(
+            recipient=payload.email, token=token_value, expires_at=response.expires_at
+        )
 
 
 class ConfirmMagicLinkTests(IsolatedAsyncioTestCase):
@@ -217,3 +253,42 @@ class ConfirmMagicLinkTests(IsolatedAsyncioTestCase):
 
         self.assertEqual("rejected", response["user"]["team_member_status"])
         send_invite_email.assert_not_called()
+
+    async def test_invited_member_signin_confirms_membership_and_returns_token(self):
+        client, storage = self._client_with_memberships("invited")
+        magic_token = {
+            "email": "user@example.com",
+            "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat(),
+            "token": "tkn",
+        }
+
+        delete_magic_token = AsyncMock()
+        send_invite_email = AsyncMock()
+
+        with patch(
+            "app.api.routes.signin.get_magic_token_by_token", AsyncMock(return_value=magic_token)
+        ), patch("app.api.routes.signin.delete_magic_token", delete_magic_token), patch(
+            "app.api.routes.signin.get_user_by_email", AsyncMock(return_value=self.invitee)
+        ), patch(
+            "app.api.routes.signin.get_user_notification_by_subject",
+            AsyncMock(return_value={"id": "existing"}),
+        ), patch("app.api.routes.signin.create_notification", AsyncMock()), patch(
+            "app.api.routes.signin.send_welcome_email", AsyncMock()
+        ), patch(
+            "app.api.routes.signin.get_settings", return_value=self.settings
+        ), patch(
+            "app.api.routes.signin.create_access_token", return_value="jwt-token"
+        ), patch(
+            "app.api.routes.signin.send_invite_accepted_email", send_invite_email
+        ):
+            response = await confirm_magic_link(
+                MagicLinkConfirm(email="user@example.com", token="tkn"), client=client
+            )
+
+        self.assertEqual("jwt-token", response["access_token"])
+        self.assertEqual("bearer", response["token_type"])
+        self.assertEqual("accepted", response["user"]["team_member_status"])
+        self.assertEqual("accepted", storage["team_members"][0]["status"])
+
+        delete_magic_token.assert_awaited_once_with(client, "tkn")
+        send_invite_email.assert_awaited_once()
