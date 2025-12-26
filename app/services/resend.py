@@ -40,6 +40,9 @@ def _build_magic_link(token: str, base_url: str | None) -> str:
 async def send_magic_link_email(*, recipient: str, token: str, expires_at: datetime) -> None:
     settings = get_settings()
 
+    if settings.skip_emails:
+        return
+
     if not settings.resend_api_key:
         raise ResendConfigurationError("RESEND_API_KEY is not configured.")
 
@@ -96,6 +99,9 @@ async def send_magic_link_email(*, recipient: str, token: str, expires_at: datet
 async def send_welcome_email(*, recipient: str, first_name: str | None = None) -> None:
     """Send a welcome email to a new user."""
     settings = get_settings()
+
+    if settings.skip_emails:
+        return
 
     if not settings.resend_api_key:
         raise ResendConfigurationError("RESEND_API_KEY is not configured.")
@@ -161,6 +167,9 @@ async def send_invite_accepted_email(
 ) -> None:
     """Notify an inviter that their invitation was accepted."""
     settings = get_settings()
+
+    if settings.skip_emails:
+        return
 
     if not settings.resend_api_key:
         raise ResendConfigurationError("RESEND_API_KEY is not configured.")

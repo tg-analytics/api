@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     resend_api_key: str | None = None
     resend_from_email: EmailStr | None = None
     magic_link_base_url: str | None = None
+    skip_emails: bool = Field(False, env="SKIP_EMAILS")
 
     @model_validator(mode="after")
     def validate_supabase(self):
