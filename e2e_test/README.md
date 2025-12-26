@@ -3,7 +3,6 @@ Command-line Options:
 
 --clean-db - Clean database before running tests
 --debug - Enable verbose debug output
---flow=<name> - Run specific flow (auth, settings, team, or all)
 --help - Show usage information
 
 # Run with clean database and debug output
