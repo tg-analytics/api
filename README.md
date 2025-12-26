@@ -1,6 +1,6 @@
 # FastAPI Starter Kit
 
-Simple FastAPI starter template with JWT auth, PostgreSQL via SQLAlchemy, and Alembic migrations.
+Simple FastAPI starter template with JWT auth and PostgreSQL via SQLAlchemy.
 
 ## Quickstart
 
@@ -37,17 +37,13 @@ If you use Supabase, set `SUPABASE_URL` to your project URL (ending with `.supab
 
 When `DATABASE_URL` is not provided, the app will derive the correct Postgres connection string automatically from the Supabase values.
 
-3. Run migrations:
-
-```bash
-alembic upgrade head
-```
-
-4. Start the API:
+3. Start the API:
 
 ```bash
 uvicorn app.main:app --reload
 ```
+
+This starter does not bundle a migrations tool; initialize your database schema using your preferred approach before running the application.
 
 ### Endpoints
 
