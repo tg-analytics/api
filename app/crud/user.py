@@ -63,7 +63,7 @@ async def create_user(client: Client, user_in: UserCreate) -> dict:
     
     user_data = {
         "email": user_in.email,
-        "name": user_in.email.split("@")[0],  # Default name from email
+        "first_name": user_in.email.split("@")[0],  # Default name from email
         "hashed_password": hashed_password,
     }
     
@@ -79,7 +79,7 @@ async def create_invited_user(client: Client, email: str) -> dict:
     """Create a user record for an invited team member."""
     user_data = {
         "email": email,
-        "name": email.split("@")[0],
+        "first_name": email.split("@")[0],
     }
 
     response = client.table("users").insert(user_data).execute()
