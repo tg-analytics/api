@@ -12,9 +12,10 @@ async def get_user_default_account_id(client: Client, user_id: str) -> str | Non
 
 async def get_team_members_by_account(client: Client, account_id: str) -> list[dict]:
     """Get all team members for an account with user details."""
+    # Use the specific foreign key relationship to avoid ambiguity
     response = (
         client.table("team_members")
-        .select("id, role, user_id, created_at, users(name)")
+        .select("id, role, user_id, created_at, users!team_members_user_id_fkey(first_name, last_name)")
         .eq("account_id", account_id)
         .is_("deleted_at", "null")
         .execute()
@@ -24,7 +25,10 @@ async def get_team_members_by_account(client: Client, account_id: str) -> list[d
     for member in response.data:
         user_name = None
         if member.get("users") and isinstance(member["users"], dict):
-            user_name = member["users"].get("name")
+            # Combine first and last name if available
+            first_name = member["users"].get("first_name", "")
+            last_name = member["users"].get("last_name", "")
+            user_name = f"{first_name} {last_name}".strip() or None
         
         members.append({
             "id": member["id"],
