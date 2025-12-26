@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from postgrest.exceptions import APIError
 from supabase import Client
 
@@ -21,6 +21,7 @@ from app.crud.magic_token import create_magic_token
 from app.db.base import get_supabase
 from app.schemas.team_member import (
     TeamMemberInvite,
+    TeamMemberListResponse,
     TeamMemberResponse,
     TeamMemberUpdate,
 )
@@ -121,12 +122,25 @@ async def invite_team_member(
     }
 
 
-@router.get("", response_model=list[TeamMemberResponse])
+@router.get("", response_model=TeamMemberListResponse)
 async def list_team_members(
+    statuses: list[str] | None = Query(None, description="Filter by status"),
+    limit: int = Query(20, ge=1, le=100, description="Number of results to return"),
+    cursor: str | None = Query(None, description="Pagination cursor for infinite scroll"),
     current_user: dict = Depends(deps.get_current_user),
     client: Client = Depends(get_supabase),
-) -> list[TeamMemberResponse]:
+) -> TeamMemberListResponse:
     """List all team members in the current user's default account."""
+    allowed_statuses = {"invited", "accepted", "rejected"}
+    if statuses:
+        normalized_statuses = [value.lower() for value in statuses]
+        if any(value not in allowed_statuses for value in normalized_statuses):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid status value",
+            )
+        statuses = normalized_statuses
+
     # Get current user's default account
     account_id = await get_user_default_account_id(client, current_user["id"])
     
@@ -136,9 +150,24 @@ async def list_team_members(
             detail="No default account found for current user"
         )
     
-    members = await get_team_members_by_account(client, account_id)
-    
-    return [TeamMemberResponse(**member) for member in members]
+    try:
+        result = await get_team_members_by_account(
+            client,
+            account_id,
+            statuses=statuses,
+            limit=limit,
+            cursor=cursor,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    return TeamMemberListResponse(
+        items=[TeamMemberResponse(**member) for member in result["items"]],
+        next_cursor=result["next_cursor"],
+    )
 
 
 @router.get("/{member_id}", response_model=TeamMemberResponse)

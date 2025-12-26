@@ -53,3 +53,10 @@ class TeamMemberUpdate(BaseModel):
             raise ValueError("Invalid role value. Allowed roles: admin, guest")
 
         return normalized
+
+
+class TeamMemberListResponse(BaseModel):
+    """Response schema for paginated team member results."""
+
+    items: list[TeamMemberResponse]
+    next_cursor: str | None
