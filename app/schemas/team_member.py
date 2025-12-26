@@ -5,6 +5,7 @@ from pydantic import BaseModel, EmailStr
 class TeamMemberInvite(BaseModel):
     """Request schema for inviting a team member"""
     email: EmailStr
+    role: str
 
 
 class TeamMemberResponse(BaseModel):

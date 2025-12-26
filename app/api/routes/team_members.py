@@ -67,7 +67,7 @@ async def invite_team_member(
             account_id=account_id,
             user_id=invited_user["id"],
             inviter_id=current_user["id"],
-            role="admin"
+            role=payload.role,
         )
     else:
         # User doesn't exist, send magic link for sign-up
