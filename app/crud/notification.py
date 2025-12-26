@@ -1,9 +1,9 @@
+from datetime import UTC, datetime
+
 from supabase import Client
 
 
-async def create_notification(
-    client: Client, *, user_id: str, subject: str, body: str
-) -> dict:
+async def create_notification(client: Client, *, user_id: str, subject: str, body: str) -> dict:
     """Create a notification record for a user."""
     notification_data = {
         "user_id": user_id,
@@ -50,3 +50,55 @@ async def get_user_notifications(client: Client, user_id: str) -> list[dict]:
     )
 
     return response.data or []
+
+
+async def get_user_notification_by_id(
+    client: Client, *, notification_id: str, user_id: str
+) -> dict | None:
+    """Get a specific notification for a user if it exists."""
+    response = (
+        client.table("notifications")
+        .select("*")
+        .eq("id", notification_id)
+        .eq("user_id", user_id)
+        .is_("deleted_at", "null")
+        .limit(1)
+        .execute()
+    )
+
+    if response.data:
+        return response.data[0]
+    return None
+
+
+async def mark_all_notifications_as_read(client: Client, user_id: str) -> list[dict]:
+    """Mark all non-deleted notifications for a user as read."""
+    read_at = datetime.now(UTC).isoformat()
+    response = (
+        client.table("notifications")
+        .update({"is_read": True, "read_at": read_at})
+        .eq("user_id", user_id)
+        .is_("deleted_at", "null")
+        .execute()
+    )
+
+    return response.data or []
+
+
+async def mark_notification_as_read(client: Client, *, notification_id: str, user_id: str) -> dict:
+    """Mark a single notification as read for a user."""
+    read_at = datetime.now(UTC).isoformat()
+    response = (
+        client.table("notifications")
+        .update({"is_read": True, "read_at": read_at})
+        .eq("id", notification_id)
+        .eq("user_id", user_id)
+        .is_("deleted_at", "null")
+        .limit(1)
+        .execute()
+    )
+
+    if not response.data:
+        raise ValueError("Notification not found")
+
+    return response.data[0]

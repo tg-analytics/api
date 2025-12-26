@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 class NotificationResponse(BaseModel):
     """Response schema for user notifications."""
+
     id: str
     user_id: str
     subject: str
