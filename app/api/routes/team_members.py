@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from postgrest.exceptions import APIError
 from supabase import Client
 
 from app.api import deps
@@ -181,6 +182,7 @@ async def update_team_member_role(
     client: Client = Depends(get_supabase),
 ) -> dict:
     """Update a team member's role or status."""
+    allowed_roles = {"admin", "owner"}
     # Check if team member exists
     member = await get_team_member_by_id(client, member_id)
     
@@ -208,8 +210,14 @@ async def update_team_member_role(
     
     # Prepare update data
     update_data = {}
-    if payload.role:
-        update_data["role"] = payload.role
+    if payload.role is not None:
+        normalized_role = payload.role.lower()
+        if normalized_role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid role value"
+            )
+        update_data["role"] = normalized_role
     if payload.status is not None:
         allowed_statuses = {"invited", "accepted", "rejected"}
         normalized_status = payload.status.lower()
@@ -227,7 +235,13 @@ async def update_team_member_role(
         )
     
     # Update team member
-    updated_member = await update_team_member(client, member_id, update_data)
+    try:
+        updated_member = await update_team_member(client, member_id, update_data)
+    except APIError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid update data"
+        ) from exc
     
     if not updated_member:
         raise HTTPException(
