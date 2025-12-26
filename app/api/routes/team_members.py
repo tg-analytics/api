@@ -8,6 +8,7 @@ from app.api import deps
 from app.crud.team_member import (
     check_team_member_exists,
     create_team_member,
+    get_team_member_details,
     get_team_member_by_id,
     get_team_members_by_account,
     get_user_default_account_id,
@@ -129,6 +130,38 @@ async def list_team_members(
     members = await get_team_members_by_account(client, account_id)
     
     return [TeamMemberResponse(**member) for member in members]
+
+
+@router.get("/{member_id}", response_model=TeamMemberResponse)
+async def get_team_member(
+    member_id: str,
+    current_user: dict = Depends(deps.get_current_user),
+    client: Client = Depends(get_supabase),
+) -> TeamMemberResponse:
+    """Get a specific team member by ID in the current user's default account."""
+    member = await get_team_member_details(client, member_id)
+
+    if not member:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Team member not found"
+        )
+
+    account_id = await get_user_default_account_id(client, current_user["id"])
+
+    if not account_id or member["account_id"] != account_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view this team member"
+        )
+
+    return TeamMemberResponse(
+        id=member["id"],
+        role=member["role"],
+        user_id=member["user_id"],
+        name=member["name"],
+        joined_at=member["joined_at"],
+    )
 
 
 @router.patch("/{member_id}", status_code=status.HTTP_200_OK)
