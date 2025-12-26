@@ -36,3 +36,17 @@ async def get_user_notification_by_subject(
     if response.data and len(response.data) > 0:
         return response.data[0]
     return None
+
+
+async def get_user_notifications(client: Client, user_id: str) -> list[dict]:
+    """Get all non-deleted notifications for a user ordered by newest first."""
+    response = (
+        client.table("notifications")
+        .select("*")
+        .eq("user_id", user_id)
+        .is_("deleted_at", "null")
+        .order("created_at", desc=True)
+        .execute()
+    )
+
+    return response.data or []
