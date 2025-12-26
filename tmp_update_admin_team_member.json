@@ -1,1 +1,0 @@
-{"detail":[{"type":"value_error","loc":["body","role"],"msg":"Value error, Invalid role value. Allowed roles: admin, owner","input":"guest","ctx":{"error":{}}}]}

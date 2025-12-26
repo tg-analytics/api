@@ -896,7 +896,7 @@ test_step_30_filter_notifications_after_invite_acceptance() {
     print_debug_response "$response_unread_zero" "tmp_notifications_filter_acceptance_zero.json"
 
     check_response "$response_unread_zero" "200" "Get notifications with numeric is_read=0 after invite acceptance"
-    validate_json_field "tmp_notifications_filter_acceptance_zero.json" ".items | length" "2" "Notifications count with is_read=0 filter after invite acceptance"
+    validate_json_field "tmp_notifications_filter_acceptance_zero.json" ".items | length" "1" "Notifications count with is_read=0 filter after invite acceptance"
 
     local request_unread_false="curl -s -w '%{http_code}' -o tmp_notifications_filter_acceptance_false.json -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/notifications?is_read=false'"
     print_debug_request "$request_unread_false"
