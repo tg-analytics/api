@@ -35,6 +35,7 @@ NEW_TEAM_MEMBER_ACCESS_TOKEN=""
 NOTIFICATION_ID=""
 INVITE_ACCEPTED_NOTIFICATION_ID=""
 TEAM_MEMBER_ID=""
+ADMIN_TEAM_MEMBER_ID=""
 
 # Counters
 TOTAL_TESTS=0
@@ -747,7 +748,109 @@ test_step_23_mark_invite_notification_as_read() {
     print_test_success
 }
 
-test_step_24_get_notifications_after_mark_read() {
+test_step_24_get_admin_team_member_id() {
+    print_step "Get Team Members After Acceptance and Save Admin Member ID"
+
+    local request="curl -s -w '%{http_code}' -o tmp_team_members_after_acceptance_save.json -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/team_members'"
+    print_debug_request "$request"
+
+    local response=$(curl -s -w "%{http_code}" -o tmp_team_members_after_acceptance_save.json \
+        -H "Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN" \
+        "$API_URL/team_members")
+    print_debug_response "$response" "tmp_team_members_after_acceptance_save.json"
+
+    check_response "$response" "200" "Get team members to save admin ID"
+    validate_array_length "tmp_team_members_after_acceptance_save.json" "2" "Team members count when saving admin ID"
+    validate_json_field "tmp_team_members_after_acceptance_save.json" "map(select(.role==\"admin\" and .name==\"$NEW_TEAM_MEMBER_NAME\")) | .[0].status" "accepted" "Admin member status before update"
+
+    ADMIN_TEAM_MEMBER_ID=$(jq -r "map(select(.role==\"admin\" and .name==\"$NEW_TEAM_MEMBER_NAME\")) | .[0].id" tmp_team_members_after_acceptance_save.json)
+    if [[ -z "$ADMIN_TEAM_MEMBER_ID" || "$ADMIN_TEAM_MEMBER_ID" == "null" ]]; then
+        print_error "Failed to save admin team member ID"
+        exit 1
+    fi
+    print_debug "Saved admin team member ID: $ADMIN_TEAM_MEMBER_ID"
+
+    print_test_success
+}
+
+test_step_25_update_team_member_role_to_guest() {
+    print_step "Update Admin Team Member Role to Guest"
+
+    if [[ -z "$ADMIN_TEAM_MEMBER_ID" ]]; then
+        print_error "Admin team member ID is not set"
+        exit 1
+    fi
+
+    local request="curl -s -w '%{http_code}' -o tmp_update_admin_team_member.json -X PATCH -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' -H 'Content-Type: application/json' '$API_URL/team_members/$ADMIN_TEAM_MEMBER_ID' -d '{\"role\":\"guest\"}'"
+    print_debug_request "$request"
+
+    local response=$(curl -s -w "%{http_code}" -o tmp_update_admin_team_member.json \
+        -X PATCH \
+        -H "Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN" \
+        -H "Content-Type: application/json" \
+        "$API_URL/team_members/$ADMIN_TEAM_MEMBER_ID" \
+        -d '{"role":"guest"}')
+    print_debug_response "$response" "tmp_update_admin_team_member.json"
+
+    check_response "$response" "200" "Update team member role to guest"
+    validate_json_field "tmp_update_admin_team_member.json" ".message" "Team member updated successfully" "Update team member message"
+    validate_json_field "tmp_update_admin_team_member.json" ".id" "$ADMIN_TEAM_MEMBER_ID" "Updated team member ID"
+    validate_json_field "tmp_update_admin_team_member.json" ".role" "guest" "Updated team member role"
+    validate_json_field "tmp_update_admin_team_member.json" ".status" "accepted" "Updated team member status"
+
+    print_test_success
+}
+
+test_step_26_delete_guest_team_member() {
+    print_step "Delete Updated Team Member"
+
+    if [[ -z "$ADMIN_TEAM_MEMBER_ID" ]]; then
+        print_error "Admin team member ID is not set"
+        exit 1
+    fi
+
+    local request="curl -s -w '%{http_code}' -o tmp_delete_admin_team_member.json -X DELETE -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/team_members/$ADMIN_TEAM_MEMBER_ID'"
+    print_debug_request "$request"
+
+    local response=$(curl -s -w "%{http_code}" -o tmp_delete_admin_team_member.json \
+        -X DELETE \
+        -H "Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN" \
+        "$API_URL/team_members/$ADMIN_TEAM_MEMBER_ID")
+    print_debug_response "$response" "tmp_delete_admin_team_member.json"
+
+    check_response "$response" "200" "Delete updated team member"
+    validate_json_field "tmp_delete_admin_team_member.json" ".message" "Team member removed successfully" "Delete team member message"
+    validate_json_field "tmp_delete_admin_team_member.json" ".id" "$ADMIN_TEAM_MEMBER_ID" "Deleted team member ID"
+
+    print_test_success
+}
+
+test_step_27_get_team_members_after_delete() {
+    print_step "Get Team Members After Deleting Updated Member"
+
+    local request="curl -s -w '%{http_code}' -o tmp_team_members_after_delete.json -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/team_members'"
+    print_debug_request "$request"
+
+    local response=$(curl -s -w "%{http_code}" -o tmp_team_members_after_delete.json \
+        -H "Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN" \
+        "$API_URL/team_members")
+    print_debug_response "$response" "tmp_team_members_after_delete.json"
+
+    check_response "$response" "200" "Get team members after deleting updated member"
+    validate_array_length "tmp_team_members_after_delete.json" "1" "Team members count after delete"
+
+    local remaining_matches=$(jq "map(select(.id==\"$ADMIN_TEAM_MEMBER_ID\")) | length" tmp_team_members_after_delete.json)
+    if [[ "$remaining_matches" != "0" ]]; then
+        print_error "Deleted team member still present in team members list"
+        exit 1
+    else
+        print_success "Deleted team member is not present in team members list"
+    fi
+
+    print_test_success
+}
+
+test_step_28_get_notifications_after_mark_read() {
     print_step "Get Notifications After Marking Invite Acceptance as Read"
 
     local request="curl -s -w '%{http_code}' -o tmp_notifications_after_read.json -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/notifications'"
@@ -834,7 +937,11 @@ main() {
     test_step_21_get_team_members_after_acceptance
     test_step_22_get_notifications_after_invite_acceptance
     test_step_23_mark_invite_notification_as_read
-    test_step_24_get_notifications_after_mark_read
+    test_step_24_get_admin_team_member_id
+    test_step_25_update_team_member_role_to_guest
+    test_step_26_delete_guest_team_member
+    test_step_27_get_team_members_after_delete
+    test_step_28_get_notifications_after_mark_read
     
     # Print Summary
     print_header "TEST SUMMARY"
