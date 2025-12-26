@@ -208,7 +208,14 @@ async def remove_team_member(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to remove this team member"
         )
-    
+
+    # Prevent removing any account owner
+    if member["role"].lower() == "owner":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot remove the account owner"
+        )
+
     # Prevent removing yourself if you're the owner
     if member["user_id"] == current_user["id"] and member["role"] == "owner":
         raise HTTPException(
