@@ -2,13 +2,31 @@ from datetime import UTC, datetime
 
 from supabase import Client
 
+from app.schemas.notification import NotificationType
 
-async def create_notification(client: Client, *, user_id: str, subject: str, body: str) -> dict:
+
+async def create_notification(
+    client: Client,
+    *,
+    user_id: str,
+    subject: str,
+    body: str,
+    notification_type: NotificationType | str = NotificationType.WELCOME,
+    details: str | None = None,
+    cta: str | None = None,
+) -> dict:
     """Create a notification record for a user."""
     notification_data = {
         "user_id": user_id,
         "subject": subject,
         "body": body,
+        "type": (
+            notification_type.value
+            if isinstance(notification_type, NotificationType)
+            else notification_type
+        ),
+        "details": details,
+        "cta": cta,
     }
 
     response = client.table("notifications").insert(notification_data).execute()

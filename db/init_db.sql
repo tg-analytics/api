@@ -1,6 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TYPE user_role AS ENUM ('owner', 'admin');
+CREATE TYPE notification_type AS ENUM ('welcome', 'news', 'updates');
 
 -- Core tables ---------------------------------------------------------------
 CREATE TABLE users (
@@ -49,6 +50,9 @@ CREATE TABLE notifications (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   subject TEXT NOT NULL,
   body TEXT NOT NULL,
+  type notification_type NOT NULL DEFAULT 'welcome',
+  details TEXT,
+  cta TEXT,
   is_read BOOLEAN NOT NULL DEFAULT FALSE,
   read_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
