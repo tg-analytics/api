@@ -117,6 +117,39 @@ async def get_team_member_by_id(client: Client, member_id: str) -> dict | None:
     return None
 
 
+async def get_team_member_details(
+    client: Client,
+    member_id: str,
+) -> dict | None:
+    """Get a team member with user details by ID."""
+    response = (
+        client.table("team_members")
+        .select("id, role, user_id, account_id, created_at, users!team_members_user_id_fkey(first_name, last_name)")
+        .eq("id", member_id)
+        .is_("deleted_at", "null")
+        .execute()
+    )
+
+    if not response.data:
+        return None
+
+    member = response.data[0]
+    user_name = None
+    if member.get("users") and isinstance(member["users"], dict):
+        first_name = member["users"].get("first_name", "")
+        last_name = member["users"].get("last_name", "")
+        user_name = f"{first_name} {last_name}".strip() or None
+
+    return {
+        "id": member["id"],
+        "role": member["role"],
+        "user_id": member["user_id"],
+        "account_id": member["account_id"],
+        "name": user_name,
+        "joined_at": member["created_at"],
+    }
+
+
 async def update_team_member(
     client: Client,
     member_id: str,
