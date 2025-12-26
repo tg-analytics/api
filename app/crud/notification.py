@@ -133,6 +133,24 @@ async def get_user_notifications(
     return {"items": notifications[:limit], "next_cursor": next_cursor}
 
 
+async def get_user_notifications_count(
+    client: Client, *, user_id: str, is_read: bool | None = None
+) -> int:
+    """Get the total number of notifications for a user with optional read filtering."""
+    query = (
+        client.table("notifications")
+        .select("id", count="exact")
+        .eq("user_id", user_id)
+        .is_("deleted_at", "null")
+    )
+
+    if is_read is not None:
+        query = query.eq("is_read", is_read)
+
+    response = query.execute()
+    return int(response.count or 0)
+
+
 async def get_user_notification_by_id(
     client: Client, *, notification_id: str, user_id: str
 ) -> dict | None:
