@@ -5,11 +5,16 @@ from app.api import deps
 from app.crud.notification import (
     get_user_notification_by_id,
     get_user_notifications,
+    get_user_notifications_count,
     mark_all_notifications_as_read,
     mark_notification_as_read,
 )
 from app.db.base import get_supabase
-from app.schemas.notification import NotificationListResponse, NotificationResponse
+from app.schemas.notification import (
+    NotificationCountResponse,
+    NotificationListResponse,
+    NotificationResponse,
+)
 
 router = APIRouter(prefix="/v1.0/notifications", tags=["notifications"])
 
@@ -42,6 +47,19 @@ async def list_notifications(
         items=[NotificationResponse(**notification) for notification in result["items"]],
         next_cursor=result["next_cursor"],
     )
+
+
+@router.get("/count", response_model=NotificationCountResponse)
+async def get_notifications_count(
+    is_read: bool | None = Query(None, description="Filter by read status"),
+    current_user: dict = Depends(deps.get_current_user),
+    client: Client = Depends(get_supabase),
+) -> NotificationCountResponse:
+    """Get the count of notifications for the current user."""
+    count = await get_user_notifications_count(
+        client, user_id=current_user["id"], is_read=is_read
+    )
+    return NotificationCountResponse(count=count)
 
 
 @router.get("/{notification_id}", response_model=NotificationResponse)

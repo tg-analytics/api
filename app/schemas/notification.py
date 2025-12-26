@@ -33,3 +33,9 @@ class NotificationListResponse(BaseModel):
 
     items: list[NotificationResponse]
     next_cursor: str | None
+
+
+class NotificationCountResponse(BaseModel):
+    """Response schema for notification count results."""
+
+    count: int
