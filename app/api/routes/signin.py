@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import logging
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -12,6 +13,7 @@ from app.db.base import get_supabase
 from app.services.resend import (
     ResendConfigurationError,
     ResendSendError,
+    send_invite_accepted_email,
     send_magic_link_email,
     send_welcome_email,
 )
@@ -21,6 +23,7 @@ from app.core.security import create_access_token
 from app.core.config import get_settings
 
 MAGIC_LINK_EXPIRY_MINUTES = 15
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1.0", tags=["signin"])
 
@@ -85,9 +88,9 @@ async def create_magic_link(
 @router.post("/signin/confirm", status_code=status.HTTP_200_OK)
 async def confirm_magic_link(
     payload: MagicLinkConfirm,
-    client: Client = Depends(get_supabase)
+    client: Client = Depends(get_supabase),
 ) -> dict:
-    """Confirm a magic link and authenticate the user. Creates user, account, and team member if first time."""
+    """Confirm a magic link, authenticate the user, and bootstrap their account on first sign-in."""
     try:
         settings = get_settings()
         welcome_subject = f"Welcome to {settings.app_name}!"
@@ -259,7 +262,7 @@ async def confirm_magic_link(
                     ) from exc
             invited_memberships = (
                 client.table("team_members")
-                .select("id, status")
+                .select("id, status, created_by, account_id")
                 .eq("user_id", user["id"])
                 .is_("deleted_at", "null")
                 .execute()
@@ -277,7 +280,65 @@ async def confirm_magic_link(
                         has_rejected_membership = True
 
             if has_invited_membership:
-                client.table("team_members").update({"status": "accepted"}).eq("user_id", user["id"]).eq("status", "invited").is_("deleted_at", "null").execute()
+                accepted_invites = [
+                    membership
+                    for membership in invited_memberships.data
+                    if membership.get("status") == "invited"
+                ]
+                (
+                    client.table("team_members")
+                    .update({"status": "accepted"})
+                    .eq("user_id", user["id"])
+                    .eq("status", "invited")
+                    .is_("deleted_at", "null")
+                    .execute()
+                )
+                for membership in accepted_invites:
+                    inviter_id = membership.get("created_by")
+                    account_id = membership.get("account_id")
+                    if not inviter_id:
+                        continue
+
+                    inviter_response = (
+                        client.table("users")
+                        .select("email, first_name, last_name")
+                        .eq("id", inviter_id)
+                        .limit(1)
+                        .execute()
+                    )
+                    inviter = inviter_response.data[0] if inviter_response.data else None
+                    if not inviter or not inviter.get("email"):
+                        continue
+
+                    account_name = None
+                    if account_id:
+                        account_response = (
+                            client.table("accounts")
+                            .select("name")
+                            .eq("id", account_id)
+                            .limit(1)
+                            .execute()
+                        )
+                        if account_response.data:
+                            account_name = account_response.data[0].get("name")
+
+                    inviter_name_parts = [
+                        inviter.get("first_name") or "",
+                        inviter.get("last_name") or "",
+                    ]
+                    inviter_name = (
+                        " ".join([part for part in inviter_name_parts if part]).strip() or None
+                    )
+                    try:
+                        await send_invite_accepted_email(
+                            recipient=inviter["email"],
+                            inviter_name=inviter_name,
+                            invitee_name=user.get("first_name"),
+                            invitee_email=user["email"],
+                            account_name=account_name,
+                        )
+                    except (ResendConfigurationError, ResendSendError) as exc:
+                        logger.warning("Failed to send invite acceptance email: %s", exc)
                 membership_status = "accepted"
             elif has_rejected_membership:
                 membership_status = "rejected"

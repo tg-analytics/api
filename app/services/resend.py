@@ -119,9 +119,80 @@ async def send_welcome_email(*, recipient: str, first_name: str | None = None) -
 
     html_body = (
         f"<p>Hi {greeting_name},</p>"
-        f"<p>Welcome to <strong>{settings.app_name}</strong>! We're excited to have you on board.</p>"
+        f"<p>Welcome to <strong>{settings.app_name}</strong>! "
+        "We're excited to have you on board.</p>"
         "<p>You can sign in anytime using your email and magic link.</p>"
         "<p>If you have any questions, just reply to this email.</p>"
+    )
+
+    payload: dict[str, Any] = {
+        "from": str(settings.resend_from_email),
+        "to": [recipient],
+        "subject": subject,
+        "text": text_body,
+        "html": html_body,
+    }
+
+    headers = {"Authorization": f"Bearer {settings.resend_api_key}"}
+
+    async with httpx.AsyncClient(timeout=10) as client:
+        response = await client.post(RESEND_EMAILS_URL, json=payload, headers=headers)
+
+    if not response.is_success:
+        error_message = "Resend email send failed."
+
+        try:
+            data = response.json()
+            if isinstance(data, dict) and data.get("message"):
+                error_message = str(data["message"])
+        except ValueError:
+            pass
+
+        raise ResendSendError(error_message, status_code=response.status_code)
+
+
+async def send_invite_accepted_email(
+    *,
+    recipient: str,
+    inviter_name: str | None,
+    invitee_name: str | None,
+    invitee_email: str,
+    account_name: str | None,
+) -> None:
+    """Notify an inviter that their invitation was accepted."""
+    settings = get_settings()
+
+    if not settings.resend_api_key:
+        raise ResendConfigurationError("RESEND_API_KEY is not configured.")
+
+    if not settings.resend_from_email:
+        raise ResendConfigurationError("RESEND_FROM_EMAIL is not configured.")
+
+    inviter_display = inviter_name or recipient.split("@")[0]
+    invitee_display = invitee_name or invitee_email.split("@")[0]
+    account_display = account_name or "the account"
+
+    subject = f"{invitee_display} accepted your invitation to {settings.app_name}"
+
+    text_body = "\n".join(
+        [
+            f"Hi {inviter_display},",
+            "",
+            (
+                f"{invitee_display} ({invitee_email}) accepted your invitation "
+                f"to join {account_display}"
+            ),
+            f"on {settings.app_name}.",
+            "",
+            "They now have access to the account. No further action is needed.",
+        ]
+    )
+
+    html_body = (
+        f"<p>Hi {inviter_display},</p>"
+        f"<p><strong>{invitee_display}</strong> ({invitee_email}) accepted your invitation "
+        f"to join <strong>{account_display}</strong> on {settings.app_name}.</p>"
+        "<p>They now have access to the account. No further action is needed.</p>"
     )
 
     payload: dict[str, Any] = {
