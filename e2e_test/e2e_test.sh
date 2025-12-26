@@ -702,6 +702,27 @@ test_step_21_get_team_members_after_acceptance() {
     print_test_success
 }
 
+test_step_22_get_notifications_after_invite_acceptance() {
+    print_step "Get Notifications After Invite Acceptance"
+
+    local request="curl -s -w '%{http_code}' -o tmp_notifications_after_acceptance.json -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/notifications'"
+    print_debug_request "$request"
+
+    local response=$(curl -s -w "%{http_code}" -o tmp_notifications_after_acceptance.json \
+        -H "Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN" \
+        "$API_URL/notifications")
+    print_debug_response "$response" "tmp_notifications_after_acceptance.json"
+
+    check_response "$response" "200" "Get notifications after invite acceptance"
+    validate_array_length "tmp_notifications_after_acceptance.json" "2" "Notifications count after invite acceptance"
+    validate_json_field "tmp_notifications_after_acceptance.json" "sort_by(.created_at) | reverse | .[0].subject" "microsaas.farm+1 accepted your invitation to fastapi-starter-kit" "Latest notification subject after invite acceptance"
+    validate_json_field "tmp_notifications_after_acceptance.json" "sort_by(.created_at) | reverse | .[0].body" "microsaas.farm+1 (microsaas.farm+1@gmail.com) accepted your invitation to join microsaas.farm's Account on fastapi-starter-kit." "Latest notification body after invite acceptance"
+    validate_json_field "tmp_notifications_after_acceptance.json" "sort_by(.created_at) | reverse | .[0].type" "invite_accepted" "Latest notification type after invite acceptance"
+    validate_boolean "tmp_notifications_after_acceptance.json" "sort_by(.created_at) | reverse | .[0].is_read" "false" "Latest notification is unread after invite acceptance"
+
+    print_test_success
+}
+
 # ============================================================================
 # Parse Arguments
 # ============================================================================
@@ -769,6 +790,7 @@ main() {
     test_step_19_signin_invited_team_member
     test_step_20_confirm_signin_invited_team_member
     test_step_21_get_team_members_after_acceptance
+    test_step_22_get_notifications_after_invite_acceptance
     
     # Print Summary
     print_header "TEST SUMMARY"
