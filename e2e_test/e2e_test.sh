@@ -548,12 +548,13 @@ test_step_14_get_team_members() {
     print_debug_response "$response" "tmp_team_members.json"
     
     check_response "$response" "200" "Get team members"
-    validate_array_length "tmp_team_members.json" "1" "Team members count"
-    validate_json_field "tmp_team_members.json" ".[0].role" "owner" "Member role"
-    validate_json_field "tmp_team_members.json" ".[0].status" "accepted" "Member status"
-    
+    validate_json_field "tmp_team_members.json" ".items | length" "1" "Team members count"
+    validate_json_field "tmp_team_members.json" ".items[0].role" "owner" "Member role"
+    validate_json_field "tmp_team_members.json" ".items[0].status" "accepted" "Member status"
+    validate_json_field "tmp_team_members.json" ".next_cursor" "null" "Next cursor is null"
+
     # Check name contains first_name
-    local team_member_name=$(jq -r '.[0].name' tmp_team_members.json)
+    local team_member_name=$(jq -r '.items[0].name' tmp_team_members.json)
     if [[ "$team_member_name" == *"$CUSTOMER1_FIRST_NAME"* ]]; then
         print_success "Team member name contains first name: '$team_member_name'"
     else
@@ -561,7 +562,7 @@ test_step_14_get_team_members() {
         exit 1
     fi
 
-    TEAM_MEMBER_ID=$(jq -r '.[0].id' tmp_team_members.json)
+    TEAM_MEMBER_ID=$(jq -r '.items[0].id' tmp_team_members.json)
     print_debug "Saved team member ID: $TEAM_MEMBER_ID"
     
     print_test_success
@@ -686,10 +687,10 @@ test_step_20_get_team_members_after_invite() {
     print_debug_response "$response" "tmp_team_members_after_invite.json"
 
     check_response "$response" "200" "Get team members after invite"
-    validate_array_length "tmp_team_members_after_invite.json" "2" "Team members count after invite"
-    validate_json_field "tmp_team_members_after_invite.json" "map(select(.role==\"admin\" and .status==\"invited\")) | .[0].role" "admin" "Invited member role"
-    validate_json_field "tmp_team_members_after_invite.json" "map(select(.role==\"admin\" and .status==\"invited\")) | .[0].status" "invited" "Invited member status"
-    validate_json_field "tmp_team_members_after_invite.json" "map(select(.role==\"admin\" and .status==\"invited\")) | .[0].name" "$NEW_TEAM_MEMBER_NAME" "Invited member name"
+    validate_json_field "tmp_team_members_after_invite.json" ".items | length" "2" "Team members count after invite"
+    validate_json_field "tmp_team_members_after_invite.json" ".items | map(select(.role==\"admin\" and .status==\"invited\")) | .[0].role" "admin" "Invited member role"
+    validate_json_field "tmp_team_members_after_invite.json" ".items | map(select(.role==\"admin\" and .status==\"invited\")) | .[0].status" "invited" "Invited member status"
+    validate_json_field "tmp_team_members_after_invite.json" ".items | map(select(.role==\"admin\" and .status==\"invited\")) | .[0].name" "$NEW_TEAM_MEMBER_NAME" "Invited member name"
 
     print_test_success
 }
@@ -754,9 +755,9 @@ test_step_23_get_team_members_after_acceptance() {
     print_debug_response "$response" "tmp_team_members_after_acceptance.json"
 
     check_response "$response" "200" "Get team members after invite acceptance"
-    validate_array_length "tmp_team_members_after_acceptance.json" "2" "Team members count after acceptance"
-    validate_json_field "tmp_team_members_after_acceptance.json" "map(select(.role==\"admin\" and .name==\"$NEW_TEAM_MEMBER_NAME\")) | .[0].status" "accepted" "Accepted member status"
-    validate_json_field "tmp_team_members_after_acceptance.json" "map(select(.role==\"admin\" and .name==\"$NEW_TEAM_MEMBER_NAME\")) | .[0].name" "$NEW_TEAM_MEMBER_NAME" "Accepted member name"
+    validate_json_field "tmp_team_members_after_acceptance.json" ".items | length" "2" "Team members count after acceptance"
+    validate_json_field "tmp_team_members_after_acceptance.json" ".items | map(select(.role==\"admin\" and .name==\"$NEW_TEAM_MEMBER_NAME\")) | .[0].status" "accepted" "Accepted member status"
+    validate_json_field "tmp_team_members_after_acceptance.json" ".items | map(select(.role==\"admin\" and .name==\"$NEW_TEAM_MEMBER_NAME\")) | .[0].name" "$NEW_TEAM_MEMBER_NAME" "Accepted member name"
 
     print_test_success
 }
@@ -820,10 +821,10 @@ test_step_26_get_admin_team_member_id() {
     print_debug_response "$response" "tmp_team_members_after_acceptance_save.json"
 
     check_response "$response" "200" "Get team members to save admin ID"
-    validate_array_length "tmp_team_members_after_acceptance_save.json" "2" "Team members count when saving admin ID"
-    validate_json_field "tmp_team_members_after_acceptance_save.json" "map(select(.role==\"admin\" and .name==\"$NEW_TEAM_MEMBER_NAME\")) | .[0].status" "accepted" "Admin member status before update"
+    validate_json_field "tmp_team_members_after_acceptance_save.json" ".items | length" "2" "Team members count when saving admin ID"
+    validate_json_field "tmp_team_members_after_acceptance_save.json" ".items | map(select(.role==\"admin\" and .name==\"$NEW_TEAM_MEMBER_NAME\")) | .[0].status" "accepted" "Admin member status before update"
 
-    ADMIN_TEAM_MEMBER_ID=$(jq -r "map(select(.role==\"admin\" and .name==\"$NEW_TEAM_MEMBER_NAME\")) | .[0].id" tmp_team_members_after_acceptance_save.json)
+    ADMIN_TEAM_MEMBER_ID=$(jq -r ".items | map(select(.role==\"admin\" and .name==\"$NEW_TEAM_MEMBER_NAME\")) | .[0].id" tmp_team_members_after_acceptance_save.json)
     if [[ -z "$ADMIN_TEAM_MEMBER_ID" || "$ADMIN_TEAM_MEMBER_ID" == "null" ]]; then
         print_error "Failed to save admin team member ID"
         exit 1
@@ -900,9 +901,9 @@ test_step_29_get_team_members_after_delete() {
     print_debug_response "$response" "tmp_team_members_after_delete.json"
 
     check_response "$response" "200" "Get team members after deleting updated member"
-    validate_array_length "tmp_team_members_after_delete.json" "1" "Team members count after delete"
+    validate_json_field "tmp_team_members_after_delete.json" ".items | length" "1" "Team members count after delete"
 
-    local remaining_matches=$(jq "map(select(.id==\"$ADMIN_TEAM_MEMBER_ID\")) | length" tmp_team_members_after_delete.json)
+    local remaining_matches=$(jq ".items | map(select(.id==\"$ADMIN_TEAM_MEMBER_ID\")) | length" tmp_team_members_after_delete.json)
     if [[ "$remaining_matches" != "0" ]]; then
         print_error "Deleted team member still present in team members list"
         exit 1
