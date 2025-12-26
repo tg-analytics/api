@@ -14,7 +14,7 @@ from app.crud.team_member import (
     soft_delete_team_member,
     update_team_member,
 )
-from app.crud.user import get_user_by_email
+from app.crud.user import create_invited_user, get_user_by_email
 from app.crud.magic_token import create_magic_token
 from app.db.base import get_supabase
 from app.schemas.team_member import (
@@ -70,7 +70,9 @@ async def invite_team_member(
             role=payload.role,
         )
     else:
-        # User doesn't exist, send magic link for sign-up
+        # User doesn't exist, create user and send magic link for sign-up
+        invited_user = await create_invited_user(client, payload.email)
+
         token = str(uuid4())
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
         
@@ -79,7 +81,15 @@ async def invite_team_member(
             email=payload.email,
             token=token,
             expires_at=expires_at,
-            user_id=None
+            user_id=invited_user["id"]
+        )
+
+        await create_team_member(
+            client,
+            account_id=account_id,
+            user_id=invited_user["id"],
+            inviter_id=current_user["id"],
+            role=payload.role,
         )
         
         # Send invitation email with magic link

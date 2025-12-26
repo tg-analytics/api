@@ -62,6 +62,21 @@ async def create_user(client: Client, user_in: UserCreate) -> dict:
     return response.data[0]
 
 
+async def create_invited_user(client: Client, email: str) -> dict:
+    """Create a user record for an invited team member."""
+    user_data = {
+        "email": email,
+        "name": email.split("@")[0],
+    }
+
+    response = client.table("users").insert(user_data).execute()
+
+    if not response.data or len(response.data) == 0:
+        raise ValueError("Failed to create invited user")
+
+    return response.data[0]
+
+
 async def authenticate_user(client: Client, email: str, password: str) -> dict | None:
     """Authenticate a user with email and password."""
     user = await get_user_by_email(client, email)
