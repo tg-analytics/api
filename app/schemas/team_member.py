@@ -9,11 +9,17 @@ class TeamMemberInvite(BaseModel):
 
     @field_validator("role")
     @classmethod
-    def disallow_owner_role(cls, value: str) -> str:
-        """Prevent inviting team members with the owner role."""
-        if value.lower() == "owner":
+    def validate_invited_role(cls, value: str) -> str:
+        """Validate and normalize invited team member role."""
+        normalized = value.lower()
+        allowed_roles = {"admin"}
+
+        if normalized == "owner":
             raise ValueError("Inviting a team member with the owner role is not allowed")
-        return value
+        if normalized not in allowed_roles:
+            raise ValueError("Invalid role value. Allowed roles: admin")
+
+        return normalized
 
 
 class TeamMemberResponse(BaseModel):
@@ -30,3 +36,18 @@ class TeamMemberUpdate(BaseModel):
     """Request schema for updating a team member"""
     role: str | None = None
     status: str | None = None
+
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, value: str | None) -> str | None:
+        """Validate and normalize role updates."""
+        if value is None:
+            return value
+
+        normalized = value.lower()
+        allowed_roles = {"admin", "owner"}
+
+        if normalized not in allowed_roles:
+            raise ValueError("Invalid role value. Allowed roles: admin, owner")
+
+        return normalized
