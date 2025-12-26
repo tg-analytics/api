@@ -25,11 +25,13 @@ API_URL="$BASE_URL/$API_VERSION"
 
 # Customer data
 CUSTOMER1_EMAIL="microsaas.farm@gmail.com"
-NEW_TEAM_MEMBER_EMAIL="microsaas.farm+2@gmail.com"
-NEW_TEAM_MEMBER_NAME="microsaas.farm+2"
+NEW_TEAM_MEMBER_EMAIL="microsaas.farm+1@gmail.com"
+NEW_TEAM_MEMBER_NAME="microsaas.farm+1"
 CUSTOMER1_FIRST_NAME=""
 CUSTOMER1_ACCESS_TOKEN=""
 MAGIC_TOKEN=""
+NEW_TEAM_MEMBER_MAGIC_TOKEN=""
+NEW_TEAM_MEMBER_ACCESS_TOKEN=""
 NOTIFICATION_ID=""
 TEAM_MEMBER_ID=""
 
@@ -636,6 +638,70 @@ test_step_18_get_team_members_after_invite() {
     print_test_success
 }
 
+test_step_19_signin_invited_team_member() {
+    print_step "Sign In Invited Team Member"
+
+    local request="curl -s -w '%{http_code}' -o tmp_invited_member_signin.json -X POST '$API_URL/signin' -H 'Content-Type: application/json' -d '{\"email\": \"$NEW_TEAM_MEMBER_EMAIL\"}'"
+    print_debug_request "$request"
+
+    local response=$(curl -s -w "%{http_code}" -o tmp_invited_member_signin.json -X POST "$API_URL/signin" \
+        -H "Content-Type: application/json" \
+        -d "{\"email\": \"$NEW_TEAM_MEMBER_EMAIL\"}")
+    print_debug_response "$response" "tmp_invited_member_signin.json"
+
+    check_response "$response" "201" "Sign in invited team member"
+    validate_json_not_null "tmp_invited_member_signin.json" ".token" "Invited member magic token"
+    validate_json_not_null "tmp_invited_member_signin.json" ".expires_at" "Invited member token expiration"
+
+    NEW_TEAM_MEMBER_MAGIC_TOKEN=$(jq -r '.token' tmp_invited_member_signin.json)
+    print_debug "Saved invited member magic token: $NEW_TEAM_MEMBER_MAGIC_TOKEN"
+
+    print_test_success
+}
+
+test_step_20_confirm_signin_invited_team_member() {
+    print_step "Confirm Sign In Invited Team Member"
+
+    local request="curl -s -w '%{http_code}' -o tmp_invited_member_confirm.json -X POST '$API_URL/signin/confirm' -H 'Content-Type: application/json' -d '{\"email\": \"$NEW_TEAM_MEMBER_EMAIL\", \"token\": \"$NEW_TEAM_MEMBER_MAGIC_TOKEN\"}'"
+    print_debug_request "$request"
+
+    local response=$(curl -s -w "%{http_code}" -o tmp_invited_member_confirm.json -X POST "$API_URL/signin/confirm" \
+        -H "Content-Type: application/json" \
+        -d "{\"email\": \"$NEW_TEAM_MEMBER_EMAIL\", \"token\": \"$NEW_TEAM_MEMBER_MAGIC_TOKEN\"}")
+    print_debug_response "$response" "tmp_invited_member_confirm.json"
+
+    check_response "$response" "200" "Confirm invited team member sign in"
+    validate_json_not_null "tmp_invited_member_confirm.json" ".access_token" "Invited member access token"
+    validate_json_not_null "tmp_invited_member_confirm.json" ".token_type" "Invited member token type"
+    validate_json_field "tmp_invited_member_confirm.json" ".user.email" "$NEW_TEAM_MEMBER_EMAIL" "Invited member email"
+    validate_json_field "tmp_invited_member_confirm.json" ".user.name" "$NEW_TEAM_MEMBER_NAME" "Invited member name"
+    validate_json_field "tmp_invited_member_confirm.json" ".user.team_member_status" "accepted" "Invited member status"
+
+    NEW_TEAM_MEMBER_ACCESS_TOKEN=$(jq -r '.access_token' tmp_invited_member_confirm.json)
+    print_debug "Saved invited member access token"
+
+    print_test_success
+}
+
+test_step_21_get_team_members_after_acceptance() {
+    print_step "Get All Team Members After Invite Acceptance"
+
+    local request="curl -s -w '%{http_code}' -o tmp_team_members_after_acceptance.json -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/team_members'"
+    print_debug_request "$request"
+
+    local response=$(curl -s -w "%{http_code}" -o tmp_team_members_after_acceptance.json \
+        -H "Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN" \
+        "$API_URL/team_members")
+    print_debug_response "$response" "tmp_team_members_after_acceptance.json"
+
+    check_response "$response" "200" "Get team members after invite acceptance"
+    validate_array_length "tmp_team_members_after_acceptance.json" "2" "Team members count after acceptance"
+    validate_json_field "tmp_team_members_after_acceptance.json" "map(select(.role==\"admin\" and .email==\"$NEW_TEAM_MEMBER_EMAIL\")) | .[0].status" "accepted" "Accepted member status"
+    validate_json_field "tmp_team_members_after_acceptance.json" "map(select(.role==\"admin\" and .email==\"$NEW_TEAM_MEMBER_EMAIL\")) | .[0].name" "$NEW_TEAM_MEMBER_NAME" "Accepted member name"
+
+    print_test_success
+}
+
 # ============================================================================
 # Parse Arguments
 # ============================================================================
@@ -700,6 +766,9 @@ main() {
     test_step_16_invite_existing_team_member
     test_step_17_invite_existing_user_new_team_member
     test_step_18_get_team_members_after_invite
+    test_step_19_signin_invited_team_member
+    test_step_20_confirm_signin_invited_team_member
+    test_step_21_get_team_members_after_acceptance
     
     # Print Summary
     print_header "TEST SUMMARY"
