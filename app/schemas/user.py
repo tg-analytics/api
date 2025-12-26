@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class UserBase(BaseModel):
@@ -23,3 +23,22 @@ class UserMeResponse(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
     default_account_id: str | None = None
+
+
+class UserUpdate(BaseModel):
+    """Schema for updating user profile details."""
+
+    first_name: str | None = Field(default=None, min_length=1, max_length=100)
+    last_name: str | None = Field(default=None, min_length=1, max_length=100)
+
+    @field_validator("first_name", "last_name")
+    @classmethod
+    def strip_and_validate(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("must not be blank")
+
+        return stripped
