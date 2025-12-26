@@ -21,6 +21,7 @@ class TeamMemberResponse(BaseModel):
     id: str
     role: str
     user_id: str
+    status: str
     name: str | None
     joined_at: datetime
 
@@ -28,3 +29,4 @@ class TeamMemberResponse(BaseModel):
 class TeamMemberUpdate(BaseModel):
     """Request schema for updating a team member"""
     role: str | None = None
+    status: str | None = None
