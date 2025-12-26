@@ -741,7 +741,7 @@ test_step_23_mark_invite_notification_as_read() {
     print_debug_response "$response" "tmp_invite_notification_read.json"
 
     check_response "$response" "200" "Mark invite accepted notification as read"
-    validate_json_field "tmp_invite_notification_read.json" ".subject" "microsaas.farm+1 accepted your invitation to fastapi-starter-kit!" "Invite accepted notification subject"
+    validate_json_field "tmp_invite_notification_read.json" ".subject" "microsaas.farm+1 accepted your invitation to fastapi-starter-kit" "Invite accepted notification subject"
     validate_boolean "tmp_invite_notification_read.json" ".is_read" "true" "Invite accepted notification is read"
 
     print_test_success
