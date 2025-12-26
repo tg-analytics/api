@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TYPE user_role AS ENUM ('owner', 'admin');
 CREATE TYPE team_member_status AS ENUM ('invited', 'accepted', 'rejected');
-CREATE TYPE notification_type AS ENUM ('welcome', 'news', 'updates');
+CREATE TYPE notification_type AS ENUM ('welcome', 'news', 'updates', 'invite_accepted');
 
 -- Core tables ---------------------------------------------------------------
 CREATE TABLE users (
