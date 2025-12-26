@@ -883,8 +883,81 @@ test_step_29_get_notifications_after_invite_acceptance() {
     print_test_success
 }
 
-# Step 30: Mark Invite Accepted Notification as Read
-test_step_30_mark_invite_notification_as_read() {
+# Step 30: Filter Notifications After Invite Acceptance
+test_step_30_filter_notifications_after_invite_acceptance() {
+    print_step "Filter Notifications After Invite Acceptance"
+
+    local request_unread_zero="curl -s -w '%{http_code}' -o tmp_notifications_filter_acceptance_zero.json -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/notifications?is_read=0'"
+    print_debug_request "$request_unread_zero"
+
+    local response_unread_zero=$(curl -s -w "%{http_code}" -o tmp_notifications_filter_acceptance_zero.json \
+        -H "Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN" \
+        "$API_URL/notifications?is_read=0")
+    print_debug_response "$response_unread_zero" "tmp_notifications_filter_acceptance_zero.json"
+
+    check_response "$response_unread_zero" "200" "Get notifications with numeric is_read=0 after invite acceptance"
+    validate_json_field "tmp_notifications_filter_acceptance_zero.json" ".items | length" "2" "Notifications count with is_read=0 filter after invite acceptance"
+
+    local request_unread_false="curl -s -w '%{http_code}' -o tmp_notifications_filter_acceptance_false.json -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/notifications?is_read=false'"
+    print_debug_request "$request_unread_false"
+
+    local response_unread_false=$(curl -s -w "%{http_code}" -o tmp_notifications_filter_acceptance_false.json \
+        -H "Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN" \
+        "$API_URL/notifications?is_read=false")
+    print_debug_response "$response_unread_false" "tmp_notifications_filter_acceptance_false.json"
+
+    check_response "$response_unread_false" "200" "Get notifications with boolean false filter after invite acceptance"
+    validate_json_field "tmp_notifications_filter_acceptance_false.json" ".items | length" "1" "Notifications count with is_read=false filter after invite acceptance"
+
+    local request_read_true="curl -s -w '%{http_code}' -o tmp_notifications_filter_acceptance_true.json -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/notifications?is_read=1'"
+    print_debug_request "$request_read_true"
+
+    local response_read_true=$(curl -s -w "%{http_code}" -o tmp_notifications_filter_acceptance_true.json \
+        -H "Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN" \
+        "$API_URL/notifications?is_read=1")
+    print_debug_response "$response_read_true" "tmp_notifications_filter_acceptance_true.json"
+
+    check_response "$response_read_true" "200" "Get notifications with is_read=1 filter after invite acceptance"
+    validate_json_field "tmp_notifications_filter_acceptance_true.json" ".items | length" "1" "Notifications count with is_read=1 filter after invite acceptance"
+
+    local request_count_all="curl -s -w '%{http_code}' -o tmp_notification_count_after_acceptance.json -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/notifications/count'"
+    print_debug_request "$request_count_all"
+
+    local response_count_all=$(curl -s -w "%{http_code}" -o tmp_notification_count_after_acceptance.json \
+        -H "Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN" \
+        "$API_URL/notifications/count")
+    print_debug_response "$response_count_all" "tmp_notification_count_after_acceptance.json"
+
+    check_response "$response_count_all" "200" "Get notification count after invite acceptance"
+    validate_json_field "tmp_notification_count_after_acceptance.json" ".count" "2" "Notification count after invite acceptance"
+
+    local request_count_unread="curl -s -w '%{http_code}' -o tmp_notification_count_unread_after_acceptance.json -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/notifications/count?is_read=0'"
+    print_debug_request "$request_count_unread"
+
+    local response_count_unread=$(curl -s -w "%{http_code}" -o tmp_notification_count_unread_after_acceptance.json \
+        -H "Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN" \
+        "$API_URL/notifications/count?is_read=0")
+    print_debug_response "$response_count_unread" "tmp_notification_count_unread_after_acceptance.json"
+
+    check_response "$response_count_unread" "200" "Get unread notification count after invite acceptance"
+    validate_json_field "tmp_notification_count_unread_after_acceptance.json" ".count" "1" "Unread notification count after invite acceptance"
+
+    local request_count_read="curl -s -w '%{http_code}' -o tmp_notification_count_read_after_acceptance.json -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/notifications/count?is_read=1'"
+    print_debug_request "$request_count_read"
+
+    local response_count_read=$(curl -s -w "%{http_code}" -o tmp_notification_count_read_after_acceptance.json \
+        -H "Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN" \
+        "$API_URL/notifications/count?is_read=1")
+    print_debug_response "$response_count_read" "tmp_notification_count_read_after_acceptance.json"
+
+    check_response "$response_count_read" "200" "Get read notification count after invite acceptance"
+    validate_json_field "tmp_notification_count_read_after_acceptance.json" ".count" "1" "Read notification count after invite acceptance"
+
+    print_test_success
+}
+
+# Step 31: Mark Invite Accepted Notification as Read
+test_step_31_mark_invite_notification_as_read() {
     print_step "Mark Invite Accepted Notification as Read"
 
     local request="curl -s -w '%{http_code}' -o tmp_invite_notification_read.json -X POST -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/notifications/$INVITE_ACCEPTED_NOTIFICATION_ID/read'"
@@ -903,8 +976,8 @@ test_step_30_mark_invite_notification_as_read() {
     print_test_success
 }
 
-# Step 31: Get Team Members After Acceptance and Save Admin Member ID
-test_step_31_get_admin_team_member_id() {
+# Step 32: Get Team Members After Acceptance and Save Admin Member ID
+test_step_32_get_admin_team_member_id() {
     print_step "Get Team Members After Acceptance and Save Admin Member ID"
 
     local request="curl -s -w '%{http_code}' -o tmp_team_members_after_acceptance_save.json -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/team_members'"
@@ -929,8 +1002,8 @@ test_step_31_get_admin_team_member_id() {
     print_test_success
 }
 
-# Step 32: Update Admin Team Member Role to Guest
-test_step_32_update_team_member_role_to_guest() {
+# Step 33: Update Admin Team Member Role to Guest
+test_step_33_update_team_member_role_to_guest() {
     print_step "Update Admin Team Member Role to Guest"
 
     if [[ -z "$ADMIN_TEAM_MEMBER_ID" ]]; then
@@ -958,8 +1031,8 @@ test_step_32_update_team_member_role_to_guest() {
     print_test_success
 }
 
-# Step 33: Delete Updated Team Member
-test_step_33_delete_guest_team_member() {
+# Step 34: Delete Updated Team Member
+test_step_34_delete_guest_team_member() {
     print_step "Delete Updated Team Member"
 
     if [[ -z "$ADMIN_TEAM_MEMBER_ID" ]]; then
@@ -983,8 +1056,8 @@ test_step_33_delete_guest_team_member() {
     print_test_success
 }
 
-# Step 34: Get Team Members After Deleting Updated Member
-test_step_34_get_team_members_after_delete() {
+# Step 35: Get Team Members After Deleting Updated Member
+test_step_35_get_team_members_after_delete() {
     print_step "Get Team Members After Deleting Updated Member"
 
     local request="curl -s -w '%{http_code}' -o tmp_team_members_after_delete.json -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/team_members'"
@@ -1009,8 +1082,8 @@ test_step_34_get_team_members_after_delete() {
     print_test_success
 }
 
-# Step 35: Get Notifications After Marking Invite Acceptance as Read
-test_step_35_get_notifications_after_mark_read() {
+# Step 36: Get Notifications After Marking Invite Acceptance as Read
+test_step_36_get_notifications_after_mark_read() {
     print_step "Get Notifications After Marking Invite Acceptance as Read"
 
     local request="curl -s -w '%{http_code}' -o tmp_notifications_after_read.json -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/notifications'"
@@ -1103,12 +1176,13 @@ main() {
     test_step_27_confirm_signin_invited_team_member
     test_step_28_get_team_members_after_acceptance
     test_step_29_get_notifications_after_invite_acceptance
-    test_step_30_mark_invite_notification_as_read
-    test_step_31_get_admin_team_member_id
-    test_step_32_update_team_member_role_to_guest
-    test_step_33_delete_guest_team_member
-    test_step_34_get_team_members_after_delete
-    test_step_35_get_notifications_after_mark_read
+    test_step_30_filter_notifications_after_invite_acceptance
+    test_step_31_mark_invite_notification_as_read
+    test_step_32_get_admin_team_member_id
+    test_step_33_update_team_member_role_to_guest
+    test_step_34_delete_guest_team_member
+    test_step_35_get_team_members_after_delete
+    test_step_36_get_notifications_after_mark_read
     
     # Print Summary
     print_header "TEST SUMMARY"
