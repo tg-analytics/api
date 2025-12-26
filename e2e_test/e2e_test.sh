@@ -409,12 +409,14 @@ test_step_8_get_notifications() {
     print_debug_response "$response" "tmp_notifications.json"
     
     check_response "$response" "200" "Get notifications"
-    validate_json_field "tmp_notifications.json" ".[0].subject" "Welcome to fastapi-starter-kit!" "Notification subject"
-    validate_json_field "tmp_notifications.json" ".[0].body" "Thanks for joining fastapi-starter-kit! We're glad you're here." "Notification body"
-    validate_json_field "tmp_notifications.json" ".[0].type" "welcome" "Notification type"
-    validate_boolean "tmp_notifications.json" ".[0].is_read" "false" "Is read status"
+    jq 'sort_by(.created_at) | reverse' tmp_notifications.json > tmp_notifications_sorted.json
+    validate_array_length "tmp_notifications_sorted.json" "2" "Notifications count"
+    validate_json_field "tmp_notifications_sorted.json" ".[0].subject" "microsaas.farm+1 accepted your invitation to fastapi-starter-kit" "Newest notification subject"
+    validate_json_field "tmp_notifications_sorted.json" ".[0].body" "microsaas.farm+1 (microsaas.farm+1@gmail.com) accepted your invitation to join microsaas.farm's Account on fastapi-starter-kit." "Newest notification body"
+    validate_json_field "tmp_notifications_sorted.json" ".[0].type" "invite_accepted" "Newest notification type"
+    validate_boolean "tmp_notifications_sorted.json" ".[0].is_read" "false" "Newest notification unread status"
     
-    NOTIFICATION_ID=$(jq -r '.[0].id' tmp_notifications.json)
+    NOTIFICATION_ID=$(jq -r '.[0].id' tmp_notifications_sorted.json)
     print_debug "Saved notification ID: $NOTIFICATION_ID"
     
     print_test_success
@@ -434,8 +436,9 @@ test_step_9_read_notifications() {
     print_debug_response "$response" "tmp_read_notifications.json"
     
     check_response "$response" "200" "Mark notifications as read"
-    validate_array_length "tmp_read_notifications.json" "1" "Notifications count"
-    validate_boolean "tmp_read_notifications.json" ".[0].is_read" "true" "Is read status"
+    validate_array_length "tmp_read_notifications.json" "2" "Notifications count"
+    validate_boolean "tmp_read_notifications.json" "all(.[]; .is_read == true)" "true" "All notifications marked as read"
+    validate_json_field "tmp_read_notifications.json" "map(select(.type==\"invite_accepted\")) | .[0].is_read" "true" "Invite accepted notification read"
     
     print_test_success
 }
@@ -453,10 +456,13 @@ test_step_10_get_notifications_again() {
     print_debug_response "$response" "tmp_notifications_again.json"
     
     check_response "$response" "200" "Get notifications again"
-    validate_json_field "tmp_notifications_again.json" ".[0].subject" "Welcome to fastapi-starter-kit!" "Notification subject"
-    validate_json_field "tmp_notifications_again.json" ".[0].body" "Thanks for joining fastapi-starter-kit! We're glad you're here." "Notification body"
-    validate_json_field "tmp_notifications_again.json" ".[0].type" "welcome" "Notification type"
-    validate_boolean "tmp_notifications_again.json" ".[0].is_read" "true" "Is read status"
+    jq 'sort_by(.created_at) | reverse' tmp_notifications_again.json > tmp_notifications_again_sorted.json
+    validate_array_length "tmp_notifications_again_sorted.json" "2" "Notifications count after read"
+    validate_json_field "tmp_notifications_again_sorted.json" ".[0].subject" "microsaas.farm+1 accepted your invitation to fastapi-starter-kit" "Newest notification subject after read"
+    validate_json_field "tmp_notifications_again_sorted.json" ".[0].type" "invite_accepted" "Newest notification type after read"
+    validate_boolean "tmp_notifications_again_sorted.json" ".[0].is_read" "true" "Newest notification read status"
+    validate_json_field "tmp_notifications_again_sorted.json" ".[1].subject" "Welcome to fastapi-starter-kit!" "Welcome notification subject after read"
+    validate_boolean "tmp_notifications_again_sorted.json" ".[1].is_read" "true" "Welcome notification read status"
     
     print_test_success
 }
@@ -474,10 +480,10 @@ test_step_11_get_notification_by_id() {
     print_debug_response "$response" "tmp_notification_by_id.json"
     
     check_response "$response" "200" "Get notification by ID"
-    validate_json_field "tmp_notification_by_id.json" ".subject" "Welcome to fastapi-starter-kit!" "Notification subject"
-    validate_json_field "tmp_notification_by_id.json" ".body" "Thanks for joining fastapi-starter-kit! We're glad you're here." "Notification body"
-    validate_json_field "tmp_notification_by_id.json" ".type" "welcome" "Notification type"
-    validate_boolean "tmp_notification_by_id.json" ".is_read" "true" "Is read status"
+    validate_json_field "tmp_notification_by_id.json" ".subject" "microsaas.farm+1 accepted your invitation to fastapi-starter-kit" "Notification subject by ID"
+    validate_json_field "tmp_notification_by_id.json" ".body" "microsaas.farm+1 (microsaas.farm+1@gmail.com) accepted your invitation to join microsaas.farm's Account on fastapi-starter-kit." "Notification body by ID"
+    validate_json_field "tmp_notification_by_id.json" ".type" "invite_accepted" "Notification type by ID"
+    validate_boolean "tmp_notification_by_id.json" ".is_read" "true" "Notification read status by ID"
     
     print_test_success
 }
