@@ -33,6 +33,7 @@ MAGIC_TOKEN=""
 NEW_TEAM_MEMBER_MAGIC_TOKEN=""
 NEW_TEAM_MEMBER_ACCESS_TOKEN=""
 NOTIFICATION_ID=""
+INVITE_ACCEPTED_NOTIFICATION_ID=""
 TEAM_MEMBER_ID=""
 
 # Counters
@@ -719,6 +720,47 @@ test_step_22_get_notifications_after_invite_acceptance() {
     validate_json_field "tmp_notifications_after_acceptance.json" "sort_by(.created_at) | reverse | .[0].body" "microsaas.farm+1 (microsaas.farm+1@gmail.com) accepted your invitation to join microsaas.farm's Account on fastapi-starter-kit." "Latest notification body after invite acceptance"
     validate_json_field "tmp_notifications_after_acceptance.json" "sort_by(.created_at) | reverse | .[0].type" "invite_accepted" "Latest notification type after invite acceptance"
     validate_boolean "tmp_notifications_after_acceptance.json" "sort_by(.created_at) | reverse | .[0].is_read" "false" "Latest notification is unread after invite acceptance"
+    validate_json_not_null "tmp_notifications_after_acceptance.json" "sort_by(.created_at) | reverse | .[0].id" "Invite accepted notification id"
+
+    INVITE_ACCEPTED_NOTIFICATION_ID=$(jq -r 'sort_by(.created_at) | reverse | .[0].id' tmp_notifications_after_acceptance.json)
+    print_debug "Saved invite accepted notification ID: $INVITE_ACCEPTED_NOTIFICATION_ID"
+
+    print_test_success
+}
+
+test_step_23_mark_invite_notification_as_read() {
+    print_step "Mark Invite Accepted Notification as Read"
+
+    local request="curl -s -w '%{http_code}' -o tmp_invite_notification_read.json -X POST -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/notifications/$INVITE_ACCEPTED_NOTIFICATION_ID/read'"
+    print_debug_request "$request"
+
+    local response=$(curl -s -w "%{http_code}" -o tmp_invite_notification_read.json \
+        -X POST \
+        -H "Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN" \
+        "$API_URL/notifications/$INVITE_ACCEPTED_NOTIFICATION_ID/read")
+    print_debug_response "$response" "tmp_invite_notification_read.json"
+
+    check_response "$response" "200" "Mark invite accepted notification as read"
+    validate_json_field "tmp_invite_notification_read.json" ".subject" "microsaas.farm+1 accepted your invitation to fastapi-starter-kit!" "Invite accepted notification subject"
+    validate_boolean "tmp_invite_notification_read.json" ".is_read" "true" "Invite accepted notification is read"
+
+    print_test_success
+}
+
+test_step_24_get_notifications_after_mark_read() {
+    print_step "Get Notifications After Marking Invite Acceptance as Read"
+
+    local request="curl -s -w '%{http_code}' -o tmp_notifications_after_read.json -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/notifications'"
+    print_debug_request "$request"
+
+    local response=$(curl -s -w "%{http_code}" -o tmp_notifications_after_read.json \
+        -H "Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN" \
+        "$API_URL/notifications")
+    print_debug_response "$response" "tmp_notifications_after_read.json"
+
+    check_response "$response" "200" "Get notifications after marking invite acceptance as read"
+    validate_array_length "tmp_notifications_after_read.json" "2" "Notifications count after marking invite acceptance as read"
+    validate_boolean "tmp_notifications_after_read.json" "map(select(.id==\"$INVITE_ACCEPTED_NOTIFICATION_ID\")) | .[0].is_read" "true" "Invite accepted notification is read in list"
 
     print_test_success
 }
@@ -791,6 +833,8 @@ main() {
     test_step_20_confirm_signin_invited_team_member
     test_step_21_get_team_members_after_acceptance
     test_step_22_get_notifications_after_invite_acceptance
+    test_step_23_mark_invite_notification_as_read
+    test_step_24_get_notifications_after_mark_read
     
     # Print Summary
     print_header "TEST SUMMARY"
