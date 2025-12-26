@@ -696,8 +696,8 @@ test_step_21_get_team_members_after_acceptance() {
 
     check_response "$response" "200" "Get team members after invite acceptance"
     validate_array_length "tmp_team_members_after_acceptance.json" "2" "Team members count after acceptance"
-    validate_json_field "tmp_team_members_after_acceptance.json" "map(select(.role==\"admin\" and .email==\"$NEW_TEAM_MEMBER_EMAIL\")) | .[0].status" "accepted" "Accepted member status"
-    validate_json_field "tmp_team_members_after_acceptance.json" "map(select(.role==\"admin\" and .email==\"$NEW_TEAM_MEMBER_EMAIL\")) | .[0].name" "$NEW_TEAM_MEMBER_NAME" "Accepted member name"
+    validate_json_field "tmp_team_members_after_acceptance.json" "map(select(.role==\"admin\" and .name==\"$NEW_TEAM_MEMBER_NAME\")) | .[0].status" "accepted" "Accepted member status"
+    validate_json_field "tmp_team_members_after_acceptance.json" "map(select(.role==\"admin\" and .name==\"$NEW_TEAM_MEMBER_NAME\")) | .[0].name" "$NEW_TEAM_MEMBER_NAME" "Accepted member name"
 
     print_test_success
 }
