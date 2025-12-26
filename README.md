@@ -28,6 +28,8 @@ RESEND_API_KEY=<resend-api-key>
 RESEND_FROM_EMAIL=Product Team <onboarding@example.com>
 # Optional: URL used to build the magic link (token will be appended or substituted if "{token}" is present)
 # MAGIC_LINK_BASE_URL=https://example.com/auth/magic-link?token=
+# Optional: Disable outbound emails (useful for local development)
+# SKIP_EMAILS=true
 ```
 
 If you use Supabase, set `SUPABASE_URL` to your project URL (ending with `.supabase.co`) and supply either:
