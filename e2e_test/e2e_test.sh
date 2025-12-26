@@ -25,6 +25,8 @@ API_URL="$BASE_URL/$API_VERSION"
 
 # Customer data
 CUSTOMER1_EMAIL="microsaas.farm@gmail.com"
+NEW_TEAM_MEMBER_EMAIL="microsaas.farm+2@gmail.com"
+NEW_TEAM_MEMBER_NAME="microsaas.farm+2"
 CUSTOMER1_FIRST_NAME=""
 CUSTOMER1_ACCESS_TOKEN=""
 MAGIC_TOKEN=""
@@ -110,6 +112,29 @@ check_response() {
         fi
         exit 1
     fi
+}
+
+check_response_any() {
+    local response_code=$1
+    local description=$2
+    shift 2
+    local expected_codes=("$@")
+
+    TOTAL_TESTS=$((TOTAL_TESTS + 1))
+
+    for code in "${expected_codes[@]}"; do
+        if [[ "$response_code" == "$code" ]]; then
+            print_success "$description (HTTP $response_code)"
+            return 0
+        fi
+    done
+
+    print_error "$description (Expected HTTP ${expected_codes[*]}, got $response_code)"
+    if [ "$DEBUG" = true ] && [ -f "tmp_error_response.json" ]; then
+        echo "Response body:"
+        cat tmp_error_response.json
+    fi
+    exit 1
 }
 
 validate_json_field() {
@@ -548,6 +573,69 @@ test_step_15_delete_team_member() {
     print_test_success
 }
 
+test_step_16_invite_existing_team_member() {
+    print_step "Invite Existing Team Member (Should Fail)"
+
+    local request="curl -s -w '%{http_code}' -o tmp_invite_existing_member.json -X POST -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' -H 'Content-Type: application/json' '$API_URL/team_members/invite' -d '{\"email\":\"$CUSTOMER1_EMAIL\",\"role\":\"admin\"}'"
+    print_debug_request "$request"
+
+    local response=$(curl -s -w "%{http_code}" -o tmp_invite_existing_member.json \
+        -X POST \
+        -H "Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN" \
+        -H "Content-Type: application/json" \
+        "$API_URL/team_members/invite" \
+        -d "{\"email\":\"$CUSTOMER1_EMAIL\",\"role\":\"admin\"}")
+    print_debug_response "$response" "tmp_invite_existing_member.json"
+
+    check_response "$response" "400" "Invite existing team member"
+    validate_json_field "tmp_invite_existing_member.json" ".detail" "User is already a team member" "Error detail"
+
+    print_test_success
+}
+
+test_step_17_invite_existing_user_new_team_member() {
+    print_step "Invite Existing User as New Team Member"
+
+    local request="curl -s -w '%{http_code}' -o tmp_invite_new_member.json -X POST -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' -H 'Content-Type: application/json' '$API_URL/team_members/invite' -d '{\"email\":\"$NEW_TEAM_MEMBER_EMAIL\",\"role\":\"admin\"}'"
+    print_debug_request "$request"
+
+    local response=$(curl -s -w "%{http_code}" -o tmp_invite_new_member.json \
+        -X POST \
+        -H "Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN" \
+        -H "Content-Type: application/json" \
+        "$API_URL/team_members/invite" \
+        -d "{\"email\":\"$NEW_TEAM_MEMBER_EMAIL\",\"role\":\"admin\"}")
+    print_debug_response "$response" "tmp_invite_new_member.json"
+
+    check_response_any "$response" "Invite existing user as new team member" "200" "201"
+    validate_json_field "tmp_invite_new_member.json" ".email" "$NEW_TEAM_MEMBER_EMAIL" "Invitation email"
+    validate_json_field "tmp_invite_new_member.json" ".status" "invited" "Invitation status"
+    validate_json_field "tmp_invite_new_member.json" ".message" "Invitation sent successfully" "Invitation message"
+    validate_boolean "tmp_invite_new_member.json" ".user_exists" "true" "User exists flag"
+
+    print_test_success
+}
+
+test_step_18_get_team_members_after_invite() {
+    print_step "Get All Team Members After Invite"
+
+    local request="curl -s -w '%{http_code}' -o tmp_team_members_after_invite.json -H 'Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN' '$API_URL/team_members'"
+    print_debug_request "$request"
+
+    local response=$(curl -s -w "%{http_code}" -o tmp_team_members_after_invite.json \
+        -H "Authorization: Bearer $CUSTOMER1_ACCESS_TOKEN" \
+        "$API_URL/team_members")
+    print_debug_response "$response" "tmp_team_members_after_invite.json"
+
+    check_response "$response" "200" "Get team members after invite"
+    validate_array_length "tmp_team_members_after_invite.json" "2" "Team members count after invite"
+    validate_json_field "tmp_team_members_after_invite.json" "map(select(.role==\"admin\" and .status==\"invited\")) | .[0].role" "admin" "Invited member role"
+    validate_json_field "tmp_team_members_after_invite.json" "map(select(.role==\"admin\" and .status==\"invited\")) | .[0].status" "invited" "Invited member status"
+    validate_json_field "tmp_team_members_after_invite.json" "map(select(.role==\"admin\" and .status==\"invited\")) | .[0].name" "$NEW_TEAM_MEMBER_NAME" "Invited member name"
+
+    print_test_success
+}
+
 # ============================================================================
 # Parse Arguments
 # ============================================================================
@@ -609,6 +697,9 @@ main() {
     test_step_13_get_team_member_by_id
     test_step_14_update_team_member
     test_step_15_delete_team_member
+    test_step_16_invite_existing_team_member
+    test_step_17_invite_existing_user_new_team_member
+    test_step_18_get_team_members_after_invite
     
     # Print Summary
     print_header "TEST SUMMARY"
