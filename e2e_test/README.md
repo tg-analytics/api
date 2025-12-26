@@ -6,14 +6,11 @@ Command-line Options:
 --flow=<name> - Run specific flow (auth, settings, team, or all)
 --help - Show usage information
 
-# Run all tests with clean database
+# Run with clean database and debug output
+./e2e_test.sh --clean-db --debug
+
+# Run without database cleanup
+./e2e_test.sh --debug
+
+# Run normally (no debug output)
 ./e2e_test.sh --clean-db
-
-# Run only auth flow with debug
-./e2e_test.sh --flow=auth --debug
-
-# Run settings flow (includes auth) with clean db
-./e2e_test.sh --clean-db --flow=settings --debug
-
-# Run all flows
-./e2e_test.sh --flow=all --clean-db
