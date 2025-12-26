@@ -12,12 +12,12 @@ class TeamMemberInvite(BaseModel):
     def validate_invited_role(cls, value: str) -> str:
         """Validate and normalize invited team member role."""
         normalized = value.lower()
-        allowed_roles = {"admin"}
+        allowed_roles = {"admin", "guest"}
 
         if normalized == "owner":
             raise ValueError("Inviting a team member with the owner role is not allowed")
         if normalized not in allowed_roles:
-            raise ValueError("Invalid role value. Allowed roles: admin")
+            raise ValueError("Invalid role value. Allowed roles: admin, guest")
 
         return normalized
 
@@ -45,9 +45,9 @@ class TeamMemberUpdate(BaseModel):
             return value
 
         normalized = value.lower()
-        allowed_roles = {"admin", "owner"}
+        allowed_roles = {"admin", "guest"}
 
         if normalized not in allowed_roles:
-            raise ValueError("Invalid role value. Allowed roles: admin, owner")
+            raise ValueError("Invalid role value. Allowed roles: admin, guest")
 
         return normalized

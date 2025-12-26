@@ -182,7 +182,7 @@ async def update_team_member_role(
     client: Client = Depends(get_supabase),
 ) -> dict:
     """Update a team member's role or status."""
-    allowed_roles = {"admin", "owner"}
+    allowed_roles = {"admin", "owner", "guest"}
     # Check if team member exists
     member = await get_team_member_by_id(client, member_id)
     
