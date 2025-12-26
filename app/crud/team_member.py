@@ -50,8 +50,8 @@ async def get_team_members_by_account(client: Client, account_id: str) -> list[d
         user_name = None
         if member.get("users") and isinstance(member["users"], dict):
             # Combine first and last name if available
-            first_name = member["users"].get("first_name", "")
-            last_name = member["users"].get("last_name", "")
+            first_name = member["users"].get("first_name") or ""
+            last_name = member["users"].get("last_name") or ""
             user_name = f"{first_name} {last_name}".strip() or None
         
         members.append({
@@ -143,8 +143,8 @@ async def get_team_member_details(
     member = response.data[0]
     user_name = None
     if member.get("users") and isinstance(member["users"], dict):
-        first_name = member["users"].get("first_name", "")
-        last_name = member["users"].get("last_name", "")
+        first_name = member["users"].get("first_name") or ""
+        last_name = member["users"].get("last_name") or ""
         user_name = f"{first_name} {last_name}".strip() or None
 
     return {
