@@ -329,6 +329,24 @@ async def confirm_magic_link(
                     inviter_name = (
                         " ".join([part for part in inviter_name_parts if part]).strip() or None
                     )
+                    invitee_display = user.get("first_name") or user["email"].split("@")[0]
+                    account_display = account_name or "the account"
+
+                    subject = f"{invitee_display} accepted your invitation to {settings.app_name}"
+                    body = (
+                        f"{invitee_display} ({user['email']}) accepted your invitation to join "
+                        f"{account_display} on {settings.app_name}."
+                    )
+
+                    await create_notification(
+                        client,
+                        user_id=inviter_id,
+                        subject=subject,
+                        body=body,
+                        notification_type=NotificationType.INVITE_ACCEPTED,
+                        details=body,
+                        cta=None,
+                    )
                     try:
                         await send_invite_accepted_email(
                             recipient=inviter["email"],

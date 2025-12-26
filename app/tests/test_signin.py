@@ -181,6 +181,7 @@ class ConfirmMagicLinkTests(IsolatedAsyncioTestCase):
         return FakeSupabaseClient(storage), storage
 
     def _patch_common(self):
+        self.create_notification = AsyncMock(return_value={})
         patches = [
             patch(
                 "app.api.routes.signin.get_magic_token_by_token",
@@ -192,7 +193,10 @@ class ConfirmMagicLinkTests(IsolatedAsyncioTestCase):
                 "app.api.routes.signin.get_user_notification_by_subject",
                 AsyncMock(return_value={"id": "existing"}),
             ),
-            patch("app.api.routes.signin.create_notification", AsyncMock(return_value={})),
+            patch(
+                "app.api.routes.signin.create_notification",
+                self.create_notification,
+            ),
             patch("app.api.routes.signin.send_welcome_email", AsyncMock()),
             patch("app.api.routes.signin.get_settings", return_value=self.settings),
             patch("app.api.routes.signin.create_access_token", return_value="access-token"),
@@ -221,6 +225,7 @@ class ConfirmMagicLinkTests(IsolatedAsyncioTestCase):
         self.assertEqual(call_kwargs["recipient"], self.inviter["email"])
         self.assertEqual(call_kwargs["invitee_email"], self.invitee["email"])
         self.assertEqual(call_kwargs["account_name"], self.account["name"])
+        self.create_notification.assert_awaited_once()
 
     async def test_no_invitation_skips_inviter_email(self):
         client, _ = self._client_with_memberships("accepted")
