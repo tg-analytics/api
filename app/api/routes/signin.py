@@ -6,7 +6,7 @@ from supabase import Client
 from postgrest.exceptions import APIError
 
 from app.crud.magic_token import create_magic_token, get_magic_token_by_token, delete_magic_token
-from app.crud.notification import create_notification
+from app.crud.notification import create_notification, get_user_notification_by_subject
 from app.crud.user import get_user_by_email
 from app.db.base import get_supabase
 from app.services.resend import (
@@ -89,6 +89,7 @@ async def confirm_magic_link(
     """Confirm a magic link and authenticate the user. Creates user, account, and team member if first time."""
     try:
         settings = get_settings()
+        welcome_subject = f"Welcome to {settings.app_name}!"
         # Get the magic token
         magic_token = await get_magic_token_by_token(client, payload.token)
         
@@ -178,7 +179,7 @@ async def confirm_magic_link(
             new_user_created = True
         
         if new_user_created:
-            subject = f"Welcome to {settings.app_name}!"
+            subject = welcome_subject
             body = (
                 f"Thanks for joining {settings.app_name}! "
                 "We're glad you're here."
@@ -206,6 +207,38 @@ async def confirm_magic_link(
                     status_code=status.HTTP_502_BAD_GATEWAY,
                     detail=str(exc),
                 ) from exc
+        else:
+            existing_welcome_notification = await get_user_notification_by_subject(
+                client, user_id=user["id"], subject=welcome_subject
+            )
+            if not existing_welcome_notification:
+                body = (
+                    f"Thanks for joining {settings.app_name}! "
+                    "We're glad you're here."
+                )
+
+                await create_notification(
+                    client,
+                    user_id=user["id"],
+                    subject=welcome_subject,
+                    body=body,
+                )
+
+                try:
+                    await send_welcome_email(
+                        recipient=email,
+                        first_name=user.get("first_name"),
+                    )
+                except ResendConfigurationError as exc:
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail=str(exc),
+                    ) from exc
+                except ResendSendError as exc:
+                    raise HTTPException(
+                        status_code=status.HTTP_502_BAD_GATEWAY,
+                        detail=str(exc),
+                    ) from exc
         
         # Delete the magic token after successful confirmation
         await delete_magic_token(client, payload.token)
