@@ -29,6 +29,8 @@ class TeamMemberResponse(BaseModel):
     user_id: str
     status: str
     name: str | None
+    first_name: str | None = None
+    last_name: str | None = None
     joined_at: datetime
 
 

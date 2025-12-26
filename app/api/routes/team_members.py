@@ -169,6 +169,8 @@ async def get_team_member(
         role=member["role"],
         status=member["status"],
         user_id=member["user_id"],
+        first_name=member.get("first_name"),
+        last_name=member.get("last_name"),
         name=member["name"],
         joined_at=member["joined_at"],
     )

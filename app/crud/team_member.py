@@ -47,18 +47,22 @@ async def get_team_members_by_account(client: Client, account_id: str) -> list[d
     
     members = []
     for member in response.data:
+        first_name = None
+        last_name = None
         user_name = None
         if member.get("users") and isinstance(member["users"], dict):
-            # Combine first and last name if available
-            first_name = member["users"].get("first_name") or ""
-            last_name = member["users"].get("last_name") or ""
-            user_name = f"{first_name} {last_name}".strip() or None
+            first_name = member["users"].get("first_name") or None
+            last_name = member["users"].get("last_name") or None
+            if first_name:
+                user_name = first_name
         
         members.append({
             "id": member["id"],
             "role": member["role"],
             "status": member["status"],
             "user_id": member["user_id"],
+            "first_name": first_name,
+            "last_name": last_name,
             "name": user_name,
             "joined_at": member["created_at"]
         })
@@ -141,11 +145,14 @@ async def get_team_member_details(
         return None
 
     member = response.data[0]
+    first_name = None
+    last_name = None
     user_name = None
     if member.get("users") and isinstance(member["users"], dict):
-        first_name = member["users"].get("first_name") or ""
-        last_name = member["users"].get("last_name") or ""
-        user_name = f"{first_name} {last_name}".strip() or None
+        first_name = member["users"].get("first_name") or None
+        last_name = member["users"].get("last_name") or None
+        if first_name:
+            user_name = first_name
 
     return {
         "id": member["id"],
@@ -153,6 +160,8 @@ async def get_team_member_details(
         "status": member["status"],
         "user_id": member["user_id"],
         "account_id": member["account_id"],
+        "first_name": first_name,
+        "last_name": last_name,
         "name": user_name,
         "joined_at": member["created_at"],
     }
