@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -26,15 +27,25 @@ class ResendSendError(ResendError):
         self.status_code = status_code
 
 
-def _build_magic_link(token: str, base_url: str | None) -> str:
+def _build_magic_link(token: str, email: str, base_url: str | None) -> str:
     if not base_url:
         return token
 
     if "{token}" in base_url:
-        return base_url.format(token=token)
+        magic_link = base_url.format(token=token)
+        separator = "&" if "?" in magic_link else "?"
+        return f"{magic_link}{separator}email={quote(email)}"
 
+    # Strip any trailing ?token= or &token= to avoid duplication
+    if base_url.endswith("?token=") or base_url.endswith("&token="):
+        base_url = base_url[:-7]  # Remove the last 7 characters (?token= or &token=)
+
+    base_url = base_url.rstrip('/')
     separator = "&" if "?" in base_url else "?"
-    return f"{base_url.rstrip('/')}{separator}token={token}"
+
+    # Build URL with both token and email parameters
+    encoded_email = quote(email)
+    return f"{base_url}{separator}token={token}&email={encoded_email}"
 
 
 async def send_magic_link_email(*, recipient: str, token: str, expires_at: datetime) -> None:
@@ -49,7 +60,7 @@ async def send_magic_link_email(*, recipient: str, token: str, expires_at: datet
     if not settings.resend_from_email:
         raise ResendConfigurationError("RESEND_FROM_EMAIL is not configured.")
 
-    magic_link = _build_magic_link(token, settings.magic_link_base_url)
+    magic_link = _build_magic_link(token, recipient, settings.magic_link_base_url)
     subject = f"Your sign-in link for {settings.app_name}"
 
     text_body = "\n".join(

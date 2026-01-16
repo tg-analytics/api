@@ -1,6 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE TYPE user_role AS ENUM ('owner', 'admin', 'guest');
+CREATE TYPE user_role AS ENUM ('superadmin', 'brand', 'admin', 'creator');
 CREATE TYPE team_member_status AS ENUM ('invited', 'accepted', 'rejected');
 CREATE TYPE notification_type AS ENUM ('welcome', 'news', 'updates', 'invite_accepted');
 
