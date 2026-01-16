@@ -174,11 +174,11 @@ async def confirm_magic_link(
             account = account_response.data[0]
             account_id = account["id"]
             
-            # Create team member with owner role
+            # Create team member with admin role
             team_member_data = {
                 "account_id": account_id,
                 "user_id": user_id,
-                "role": "owner",
+                "role": "admin",
                 "status": "accepted",
                 "created_by": user_id,
             }
