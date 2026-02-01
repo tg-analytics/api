@@ -18,7 +18,7 @@ app.add_middleware(
 )
 
 
-@app.get("/ping", tags=["public"])
+@app.api_route("/ping", methods=["GET", "HEAD", "OPTIONS"], tags=["public"])
 async def ping() -> dict[str, str]:
     return {"status": "ok"}
 
