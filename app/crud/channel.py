@@ -94,14 +94,10 @@ def _apply_channel_filters(
 
 def _normalize_channel_row(row: dict[str, Any]) -> dict[str, Any]:
     """Normalize channel row fields for API response."""
-    username = row.get("username")
-    if username and not str(username).startswith("@"):
-        username = f"@{username}"
-
     return {
         "channel_id": row["channel_id"],
         "name": row["name"],
-        "username": username,
+        "username": _normalize_username(row.get("username")),
         "subscribers": int(row["subscribers"] or 0),
         "growth_24h": row.get("growth_24h"),
         "growth_7d": row.get("growth_7d"),
@@ -113,6 +109,53 @@ def _normalize_channel_row(row: dict[str, Any]) -> dict[str, Any]:
         "status": row["status"],
         "verified": bool(row.get("verified")),
         "scam": bool(row.get("scam")),
+    }
+
+
+def _normalize_username(username: Any) -> str | None:
+    if username is None:
+        return None
+
+    username_str = str(username)
+    if username_str.startswith("@"):
+        return username_str
+    return f"@{username_str}"
+
+
+def _to_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _to_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _compute_kpi(value: int | float | None, baseline: int | float | None) -> dict[str, Any]:
+    if value is None:
+        return {"value": None, "delta": None, "delta_percent": None}
+
+    delta: int | float | None = None
+    delta_percent: float | None = None
+
+    if baseline is not None:
+        delta = value - baseline
+        if baseline != 0:
+            delta_percent = (delta / baseline) * 100
+
+    return {
+        "value": value,
+        "delta": delta,
+        "delta_percent": delta_percent,
     }
 
 
@@ -198,4 +241,192 @@ async def get_catalog_channels(
         "next_cursor": next_cursor,
         "has_more": has_more,
         "total_estimate": total_estimate,
+    }
+
+
+async def get_channel_overview(client: Client, channel_id: str) -> dict[str, Any] | None:
+    overview_response = (
+        client.table("vw_channel_overview")
+        .select("*")
+        .eq("channel_id", channel_id)
+        .limit(1)
+        .execute()
+    )
+    overview_rows = overview_response.data or []
+    if not overview_rows:
+        return None
+
+    overview_row = overview_rows[0]
+
+    metrics_response = (
+        client.table("channel_metrics_daily")
+        .select("metric_date, subscribers, avg_views, engagement_rate, posts_per_day")
+        .eq("channel_id", channel_id)
+        .order("metric_date", desc=True)
+        .limit(30)
+        .execute()
+    )
+    metrics_rows_desc = metrics_response.data or []
+    baseline_row = metrics_rows_desc[-1] if metrics_rows_desc else None
+
+    current_subscribers = _to_int(overview_row.get("subscribers"))
+    current_avg_views = _to_int(overview_row.get("avg_views"))
+    current_engagement_rate = _to_float(overview_row.get("engagement_rate"))
+    current_posts_per_day = _to_float(overview_row.get("posts_per_day"))
+
+    baseline_subscribers = _to_int(baseline_row.get("subscribers")) if baseline_row else None
+    baseline_avg_views = _to_int(baseline_row.get("avg_views")) if baseline_row else None
+    baseline_engagement_rate = _to_float(baseline_row.get("engagement_rate")) if baseline_row else None
+    baseline_posts_per_day = _to_float(baseline_row.get("posts_per_day")) if baseline_row else None
+
+    chart_points: list[dict[str, Any]] = []
+    for metric_row in reversed(metrics_rows_desc):
+        metric_date = metric_row.get("metric_date")
+        if metric_date is None:
+            continue
+
+        chart_points.append(
+            {
+                "date": str(metric_date),
+                "subscribers": _to_int(metric_row.get("subscribers")),
+                "engagement_rate": _to_float(metric_row.get("engagement_rate")),
+            }
+        )
+
+    similarities_response = (
+        client.table("channel_similarities")
+        .select("similar_channel_id, similarity_score")
+        .eq("channel_id", channel_id)
+        .order("similarity_score", desc=True)
+        .limit(5)
+        .execute()
+    )
+    similarity_rows = similarities_response.data or []
+
+    similar_channels: list[dict[str, Any]] = []
+    for similarity_row in similarity_rows:
+        similar_channel_id = similarity_row.get("similar_channel_id")
+        if similar_channel_id is None:
+            continue
+
+        similar_channel_response = (
+            client.table("channels")
+            .select("id, name, username, subscribers_current")
+            .eq("id", similar_channel_id)
+            .limit(1)
+            .execute()
+        )
+        similar_channel_rows = similar_channel_response.data or []
+        if not similar_channel_rows:
+            continue
+
+        similar_channel_row = similar_channel_rows[0]
+        similar_channels.append(
+            {
+                "channel_id": similar_channel_row["id"],
+                "name": similar_channel_row["name"],
+                "username": _normalize_username(similar_channel_row.get("username")),
+                "subscribers": _to_int(similar_channel_row.get("subscribers_current")),
+                "similarity_score": _to_float(similarity_row.get("similarity_score")) or 0.0,
+            }
+        )
+
+    tags_response = (
+        client.table("channel_tags")
+        .select("tag_id, relevance_score")
+        .eq("channel_id", channel_id)
+        .order("relevance_score", desc=True)
+        .limit(10)
+        .execute()
+    )
+    channel_tag_rows = tags_response.data or []
+
+    tags: list[dict[str, Any]] = []
+    for channel_tag_row in channel_tag_rows:
+        tag_id = channel_tag_row.get("tag_id")
+        if tag_id is None:
+            continue
+
+        tag_response = client.table("tags").select("id, slug, name").eq("id", tag_id).limit(1).execute()
+        tag_rows = tag_response.data or []
+        if not tag_rows:
+            continue
+
+        tag_row = tag_rows[0]
+        tags.append(
+            {
+                "tag_id": tag_row["id"],
+                "slug": tag_row["slug"],
+                "name": tag_row["name"],
+                "relevance_score": _to_float(channel_tag_row.get("relevance_score")),
+            }
+        )
+
+    posts_response = (
+        client.table("posts")
+        .select(
+            "id, telegram_message_id, published_at, title, content_text, views_count, "
+            "reactions_count, comments_count, forwards_count, external_post_url"
+        )
+        .eq("channel_id", channel_id)
+        .eq("is_deleted", False)
+        .order("published_at", desc=True)
+        .limit(5)
+        .execute()
+    )
+    recent_post_rows = posts_response.data or []
+
+    recent_posts = [
+        {
+            "post_id": post_row["id"],
+            "telegram_message_id": int(post_row["telegram_message_id"]),
+            "published_at": str(post_row["published_at"]),
+            "title": post_row.get("title"),
+            "content_text": post_row.get("content_text"),
+            "views_count": _to_int(post_row.get("views_count")) or 0,
+            "reactions_count": _to_int(post_row.get("reactions_count")) or 0,
+            "comments_count": _to_int(post_row.get("comments_count")) or 0,
+            "forwards_count": _to_int(post_row.get("forwards_count")) or 0,
+            "external_post_url": post_row.get("external_post_url"),
+        }
+        for post_row in recent_post_rows
+    ]
+
+    incoming_30d = _to_int(overview_row.get("incoming_30d")) or 0
+    outgoing_30d = _to_int(overview_row.get("outgoing_30d")) or 0
+
+    return {
+        "channel": {
+            "channel_id": overview_row["channel_id"],
+            "telegram_channel_id": int(overview_row["telegram_channel_id"]),
+            "name": overview_row["name"],
+            "username": _normalize_username(overview_row.get("username")),
+            "avatar_url": overview_row.get("avatar_url"),
+            "description": overview_row.get("description"),
+            "about_text": overview_row.get("about_text"),
+            "website_url": overview_row.get("website_url"),
+            "status": overview_row["status"],
+            "country_code": overview_row.get("country_code"),
+            "category_slug": overview_row.get("category_slug"),
+            "category_name": overview_row.get("category_name"),
+        },
+        "kpis": {
+            "subscribers": _compute_kpi(current_subscribers, baseline_subscribers),
+            "avg_views": _compute_kpi(current_avg_views, baseline_avg_views),
+            "engagement_rate": _compute_kpi(current_engagement_rate, baseline_engagement_rate),
+            "posts_per_day": _compute_kpi(current_posts_per_day, baseline_posts_per_day),
+        },
+        "chart": {
+            "range": "30d",
+            "points": chart_points,
+        },
+        "similar_channels": similar_channels,
+        "tags": tags,
+        "recent_posts": recent_posts,
+        "inout_30d": {
+            "incoming": incoming_30d,
+            "outgoing": outgoing_30d,
+        },
+        "incoming_30d": incoming_30d,
+        "outgoing_30d": outgoing_30d,
     }

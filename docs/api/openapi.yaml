@@ -1725,15 +1725,104 @@ components:
     ChannelOverview:
       type: object
       properties:
-        channel: { $ref: '#/components/schemas/ChannelDetail' }
-        incoming_30d: { type: integer }
-        outgoing_30d: { type: integer }
-        tags:
-          type: array
-          items: { $ref: '#/components/schemas/TagStat' }
+        channel: { $ref: '#/components/schemas/ChannelOverviewChannel' }
+        kpis: { $ref: '#/components/schemas/ChannelOverviewKpis' }
+        chart: { $ref: '#/components/schemas/ChannelOverviewChart' }
         similar_channels:
           type: array
-          items: { $ref: '#/components/schemas/SimilarChannel' }
+          items: { $ref: '#/components/schemas/ChannelOverviewSimilarChannel' }
+        tags:
+          type: array
+          items: { $ref: '#/components/schemas/ChannelOverviewTag' }
+        recent_posts:
+          type: array
+          items: { $ref: '#/components/schemas/ChannelOverviewPost' }
+        inout_30d: { $ref: '#/components/schemas/ChannelOverviewInOut' }
+        incoming_30d: { type: integer }
+        outgoing_30d: { type: integer }
+
+    ChannelOverviewChannel:
+      type: object
+      properties:
+        channel_id: { type: string, format: uuid }
+        telegram_channel_id: { type: integer }
+        name: { type: string }
+        username: { type: [string, 'null'] }
+        avatar_url: { type: [string, 'null'] }
+        description: { type: [string, 'null'] }
+        about_text: { type: [string, 'null'] }
+        website_url: { type: [string, 'null'] }
+        status: { type: string }
+        country_code: { type: [string, 'null'] }
+        category_slug: { type: [string, 'null'] }
+        category_name: { type: [string, 'null'] }
+
+    ChannelOverviewKpi:
+      type: object
+      properties:
+        value: { type: [number, 'null'] }
+        delta: { type: [number, 'null'] }
+        delta_percent: { type: [number, 'null'] }
+
+    ChannelOverviewKpis:
+      type: object
+      properties:
+        subscribers: { $ref: '#/components/schemas/ChannelOverviewKpi' }
+        avg_views: { $ref: '#/components/schemas/ChannelOverviewKpi' }
+        engagement_rate: { $ref: '#/components/schemas/ChannelOverviewKpi' }
+        posts_per_day: { $ref: '#/components/schemas/ChannelOverviewKpi' }
+
+    ChannelOverviewChartPoint:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        subscribers: { type: [integer, 'null'] }
+        engagement_rate: { type: [number, 'null'] }
+
+    ChannelOverviewChart:
+      type: object
+      properties:
+        range: { type: string, enum: [30d] }
+        points:
+          type: array
+          items: { $ref: '#/components/schemas/ChannelOverviewChartPoint' }
+
+    ChannelOverviewSimilarChannel:
+      type: object
+      properties:
+        channel_id: { type: string, format: uuid }
+        name: { type: string }
+        username: { type: [string, 'null'] }
+        subscribers: { type: [integer, 'null'] }
+        similarity_score: { type: number }
+
+    ChannelOverviewTag:
+      type: object
+      properties:
+        tag_id: { type: string, format: uuid }
+        slug: { type: string }
+        name: { type: string }
+        relevance_score: { type: [number, 'null'] }
+
+    ChannelOverviewPost:
+      type: object
+      properties:
+        post_id: { type: string, format: uuid }
+        telegram_message_id: { type: integer }
+        published_at: { type: string, format: date-time }
+        title: { type: [string, 'null'] }
+        content_text: { type: [string, 'null'] }
+        views_count: { type: integer }
+        reactions_count: { type: integer }
+        comments_count: { type: integer }
+        forwards_count: { type: integer }
+        external_post_url: { type: [string, 'null'] }
+
+    ChannelOverviewInOut:
+      type: object
+      properties:
+        incoming: { type: integer }
+        outgoing: { type: integer }
 
     ChannelMetricPoint:
       type: object

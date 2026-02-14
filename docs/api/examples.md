@@ -245,6 +245,67 @@ curl -s "$API_BASE/v1.0/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/overview" 
   -H "Authorization: Bearer $TOKEN"
 ```
 
+```json
+{
+  "data": {
+    "channel": {
+      "channel_id": "9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2",
+      "telegram_channel_id": 100001,
+      "name": "Tech News Daily",
+      "username": "@technewsdaily",
+      "avatar_url": "https://cdn.example.com/ch/tn.png",
+      "description": "Your daily source for the latest technology news, AI breakthroughs, and digital innovation.",
+      "about_text": "Trusted by 1M+ readers. Daily summaries and explainers.",
+      "website_url": "https://technewsdaily.example",
+      "status": "verified",
+      "country_code": "US",
+      "category_slug": "technology",
+      "category_name": "Technology"
+    },
+    "kpis": {
+      "subscribers": { "value": 5430000, "delta": 156000, "delta_percent": 2.96 },
+      "avg_views": { "value": 1780000, "delta": 42000, "delta_percent": 2.42 },
+      "engagement_rate": { "value": 3.2, "delta": 0.3, "delta_percent": 10.34 },
+      "posts_per_day": { "value": 4.2, "delta": -0.5, "delta_percent": -10.64 }
+    },
+    "chart": {
+      "range": "30d",
+      "points": [
+        { "date": "2026-01-16", "subscribers": 5274000, "engagement_rate": 2.9 },
+        { "date": "2026-02-14", "subscribers": 5430000, "engagement_rate": 3.2 }
+      ]
+    },
+    "similar_channels": [
+      { "channel_id": "e7db20e8-a039-4f6f-bf2e-6f3b8ebf2ea0", "name": "Crypto Insights", "username": "@cryptoinsights", "subscribers": 1800000, "similarity_score": 0.82 },
+      { "channel_id": "6f5327be-96a8-426e-8496-b3120b7d7f1c", "name": "Gaming Universe", "username": "@gaminguniverse", "subscribers": 1200000, "similarity_score": 0.61 }
+    ],
+    "tags": [
+      { "tag_id": "b89f2d6b-e4e9-4eb8-a44e-27eb93af5cb4", "slug": "technology", "name": "Technology", "relevance_score": 92.5 },
+      { "tag_id": "6f7f57f3-1733-4600-b201-ccbef4a744f3", "slug": "ai", "name": "AI", "relevance_score": 86.0 },
+      { "tag_id": "9f6fd3d4-70c0-4e17-8aaf-2247bf4ad4f7", "slug": "news", "name": "News", "relevance_score": 77.0 }
+    ],
+    "recent_posts": [
+      {
+        "post_id": "3522a9ea-0c50-4eb1-9053-8a7e0b74f4d3",
+        "telegram_message_id": 9001,
+        "published_at": "2026-02-14T10:00:00Z",
+        "title": "Breaking: New AI model released",
+        "content_text": "New AI model released with unprecedented capabilities.",
+        "views_count": 125000,
+        "reactions_count": 4200,
+        "comments_count": 640,
+        "forwards_count": 1800,
+        "external_post_url": "https://t.me/technewsdaily/9001"
+      }
+    ],
+    "inout_30d": { "incoming": 12500, "outgoing": 3200 },
+    "incoming_30d": 12500,
+    "outgoing_30d": 3200
+  },
+  "meta": {}
+}
+```
+
 ### GET `/v1.0/channels/{channelId}/metrics` (chart)
 
 ```bash

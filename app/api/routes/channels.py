@@ -2,12 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from supabase import Client
 
 from app.api import deps
-from app.crud.channel import get_catalog_channels
+from app.crud.channel import get_catalog_channels, get_channel_overview
 from app.db.base import get_supabase
 from app.schemas.channel import (
     ChannelListEnvelope,
     ChannelListItem,
     ChannelListMeta,
+    ChannelOverviewEnvelope,
     ChannelSizeBucket,
     ChannelSortBy,
     ChannelStatus,
@@ -81,3 +82,20 @@ async def list_channels(
         ),
         meta=ChannelListMeta(total_estimate=result["total_estimate"]),
     )
+
+
+@router.get("/{channel_id}/overview", response_model=ChannelOverviewEnvelope)
+async def get_channel_overview_page(
+    channel_id: str,
+    current_user: dict = Depends(deps.get_current_user),
+    client: Client = Depends(get_supabase),
+) -> ChannelOverviewEnvelope:
+    _ = current_user
+    overview = await get_channel_overview(client, channel_id)
+    if overview is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Channel not found",
+        )
+
+    return ChannelOverviewEnvelope(data=overview, meta={})

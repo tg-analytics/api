@@ -114,10 +114,16 @@ def _override_current_user():
 
 
 def _get_fake_supabase():
+    channel_id = "9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2"
+    similar_channel_1 = "f8e98743-1448-4d13-8f8f-b8fbbf272141"
+    similar_channel_2 = "4d3ced17-4a8c-4e61-a71f-89dc852f216a"
+    tag_id_1 = "11111111-1111-1111-1111-111111111111"
+    tag_id_2 = "22222222-2222-2222-2222-222222222222"
+
     storage = {
         "vw_catalog_channels": [
             {
-                "channel_id": "9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2",
+                "channel_id": channel_id,
                 "name": "Tech News Daily",
                 "username": "technewsdaily",
                 "subscribers": 1_300_000,
@@ -188,7 +194,133 @@ def _get_fake_supabase():
                 "size_bucket": "large",
                 "updated_at": "2026-02-14T07:00:00Z",
             },
-        ]
+        ],
+        "vw_channel_overview": [
+            {
+                "channel_id": channel_id,
+                "telegram_channel_id": 100001,
+                "name": "Tech News Daily",
+                "username": "technewsdaily",
+                "avatar_url": "https://cdn.example.com/ch/tn.png",
+                "description": "Your daily source for the latest technology news.",
+                "status": "verified",
+                "country_code": "US",
+                "category_slug": "technology",
+                "category_name": "Technology",
+                "about_text": "Trusted by 1M+ readers.",
+                "website_url": "https://technewsdaily.example",
+                "subscribers": 1_300_000,
+                "avg_views": 480_000,
+                "engagement_rate": 3.2,
+                "posts_per_day": 4.2,
+                "incoming_30d": 12_500,
+                "outgoing_30d": 3_200,
+            }
+        ],
+        "channel_metrics_daily": [
+            {
+                "channel_id": channel_id,
+                "metric_date": "2026-02-14",
+                "subscribers": 1_300_000,
+                "avg_views": 480_000,
+                "engagement_rate": 3.2,
+                "posts_per_day": 4.2,
+            },
+            {
+                "channel_id": channel_id,
+                "metric_date": "2026-02-13",
+                "subscribers": 1_250_000,
+                "avg_views": 470_000,
+                "engagement_rate": 3.0,
+                "posts_per_day": 4.4,
+            },
+            {
+                "channel_id": channel_id,
+                "metric_date": "2026-01-16",
+                "subscribers": 1_200_000,
+                "avg_views": 450_000,
+                "engagement_rate": 2.9,
+                "posts_per_day": 4.7,
+            },
+        ],
+        "channel_similarities": [
+            {
+                "channel_id": channel_id,
+                "similar_channel_id": similar_channel_1,
+                "similarity_score": 0.82,
+            },
+            {
+                "channel_id": channel_id,
+                "similar_channel_id": similar_channel_2,
+                "similarity_score": 0.61,
+            },
+        ],
+        "channels": [
+            {
+                "id": similar_channel_1,
+                "name": "Crypto Growth Radar",
+                "username": "cryptoradar",
+                "subscribers_current": 640_000,
+            },
+            {
+                "id": similar_channel_2,
+                "name": "Crypto Alpha",
+                "username": "cryptoalpha",
+                "subscribers_current": 520_000,
+            },
+        ],
+        "channel_tags": [
+            {"channel_id": channel_id, "tag_id": tag_id_1, "relevance_score": 92.5},
+            {"channel_id": channel_id, "tag_id": tag_id_2, "relevance_score": 77.0},
+        ],
+        "tags": [
+            {"id": tag_id_1, "slug": "technology", "name": "Technology", "usage_count": 2},
+            {"id": tag_id_2, "slug": "news", "name": "News", "usage_count": 999},
+        ],
+        "posts": [
+            {
+                "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                "channel_id": channel_id,
+                "telegram_message_id": 9001,
+                "published_at": "2026-02-14T10:00:00Z",
+                "title": "Breaking: New AI model released",
+                "content_text": "New AI model released with unprecedented capabilities.",
+                "views_count": 125000,
+                "reactions_count": 4200,
+                "comments_count": 640,
+                "forwards_count": 1800,
+                "external_post_url": "https://t.me/technewsdaily/9001",
+                "is_deleted": False,
+            },
+            {
+                "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                "channel_id": channel_id,
+                "telegram_message_id": 9002,
+                "published_at": "2026-02-14T08:00:00Z",
+                "title": "Tip of the day",
+                "content_text": "How to optimize your workflow with five simple tools.",
+                "views_count": 89000,
+                "reactions_count": 2100,
+                "comments_count": 220,
+                "forwards_count": 920,
+                "external_post_url": "https://t.me/technewsdaily/9002",
+                "is_deleted": False,
+            },
+            {
+                "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                "channel_id": channel_id,
+                "telegram_message_id": 9003,
+                "published_at": "2026-02-13T20:00:00Z",
+                "title": "Deleted post",
+                "content_text": "Should not be returned.",
+                "views_count": 67000,
+                "reactions_count": 1500,
+                "comments_count": 180,
+                "forwards_count": 450,
+                "external_post_url": "https://t.me/technewsdaily/9003",
+                "is_deleted": True,
+            },
+        ],
     }
     return FakeSupabaseClient(storage)
 
@@ -301,5 +433,113 @@ def test_list_channels_invalid_cursor():
 
         assert response.status_code == 400
         assert response.json()["detail"] == "Invalid pagination cursor"
+    finally:
+        app.dependency_overrides = {}
+
+
+def test_get_channel_overview_success_shape():
+    supabase_client = _get_fake_supabase()
+    app.dependency_overrides[get_supabase] = lambda: supabase_client
+    app.dependency_overrides[deps.get_current_user] = _override_current_user
+
+    try:
+        with TestClient(app) as client:
+            response = client.get("/v1.0/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/overview")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["data"]["channel"]["name"] == "Tech News Daily"
+        assert body["data"]["channel"]["username"] == "@technewsdaily"
+        assert body["data"]["kpis"]["subscribers"]["value"] == 1300000
+        assert body["data"]["chart"]["range"] == "30d"
+        assert len(body["data"]["chart"]["points"]) == 3
+        assert len(body["data"]["similar_channels"]) == 2
+        assert len(body["data"]["tags"]) == 2
+        assert len(body["data"]["recent_posts"]) == 2
+        assert body["data"]["inout_30d"]["incoming"] == 12500
+        assert body["data"]["incoming_30d"] == 12500
+        assert body["meta"] == {}
+    finally:
+        app.dependency_overrides = {}
+
+
+def test_get_channel_overview_uses_tag_relevance():
+    supabase_client = _get_fake_supabase()
+    app.dependency_overrides[get_supabase] = lambda: supabase_client
+    app.dependency_overrides[deps.get_current_user] = _override_current_user
+
+    try:
+        with TestClient(app) as client:
+            response = client.get("/v1.0/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/overview")
+
+        assert response.status_code == 200
+        tags = response.json()["data"]["tags"]
+        assert tags[0]["slug"] == "technology"
+        assert tags[0]["relevance_score"] == 92.5
+        assert tags[1]["slug"] == "news"
+        assert tags[1]["relevance_score"] == 77.0
+    finally:
+        app.dependency_overrides = {}
+
+
+def test_get_channel_overview_excludes_deleted_posts():
+    supabase_client = _get_fake_supabase()
+    app.dependency_overrides[get_supabase] = lambda: supabase_client
+    app.dependency_overrides[deps.get_current_user] = _override_current_user
+
+    try:
+        with TestClient(app) as client:
+            response = client.get("/v1.0/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/overview")
+
+        assert response.status_code == 200
+        recent_posts = response.json()["data"]["recent_posts"]
+        message_ids = [post["telegram_message_id"] for post in recent_posts]
+        assert 9003 not in message_ids
+    finally:
+        app.dependency_overrides = {}
+
+
+def test_get_channel_overview_not_found():
+    supabase_client = _get_fake_supabase()
+    app.dependency_overrides[get_supabase] = lambda: supabase_client
+    app.dependency_overrides[deps.get_current_user] = _override_current_user
+
+    try:
+        with TestClient(app) as client:
+            response = client.get("/v1.0/channels/00000000-0000-0000-0000-000000000000/overview")
+
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Channel not found"
+    finally:
+        app.dependency_overrides = {}
+
+
+def test_get_channel_overview_requires_auth():
+    supabase_client = _get_fake_supabase()
+    app.dependency_overrides[get_supabase] = lambda: supabase_client
+
+    try:
+        with TestClient(app) as client:
+            response = client.get("/v1.0/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/overview")
+
+        assert response.status_code == 401
+    finally:
+        app.dependency_overrides = {}
+
+
+def test_get_channel_overview_kpi_delta_computation():
+    supabase_client = _get_fake_supabase()
+    app.dependency_overrides[get_supabase] = lambda: supabase_client
+    app.dependency_overrides[deps.get_current_user] = _override_current_user
+
+    try:
+        with TestClient(app) as client:
+            response = client.get("/v1.0/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/overview")
+
+        assert response.status_code == 200
+        kpis = response.json()["data"]["kpis"]
+        assert kpis["subscribers"]["delta"] == 100000
+        assert kpis["subscribers"]["delta_percent"] == 100000 / 1200000 * 100
+        assert kpis["posts_per_day"]["delta"] == -0.5
     finally:
         app.dependency_overrides = {}
