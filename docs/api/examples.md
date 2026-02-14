@@ -708,6 +708,24 @@ curl -s "$API_BASE/v1.0/mini-apps/summary?period=7d" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
+```json
+{
+  "data": {
+    "total_mini_apps": 4412,
+    "daily_active_users": 28500000,
+    "total_sessions": 156000000,
+    "avg_session_seconds": 272,
+    "total_mini_apps_delta": 127,
+    "daily_active_users_delta": 3140000,
+    "daily_active_users_delta_percent": 12.38,
+    "total_sessions_delta": 12400000,
+    "total_sessions_delta_percent": 8.64,
+    "avg_session_seconds_delta": 18
+  },
+  "meta": {}
+}
+```
+
 ### GET `/v1.0/mini-apps` (base list)
 
 ```bash
@@ -715,11 +733,63 @@ curl -s "$API_BASE/v1.0/mini-apps?sort_by=daily_users&sort_order=desc&limit=20" 
   -H "Authorization: Bearer $TOKEN"
 ```
 
+```json
+{
+  "data": [
+    {
+      "mini_app_id": "fbd37667-230f-4c5b-b0f6-243b02608e11",
+      "name": "Hamster Kombat",
+      "slug": "hamster-kombat",
+      "category_slug": "games",
+      "daily_users": 2500000,
+      "total_users": 45000000,
+      "sessions": 98000000,
+      "rating": 4.8,
+      "growth_weekly": 15.2,
+      "launched_at": "2025-06-19"
+    }
+  ],
+  "page": {
+    "next_cursor": "eyJsYXN0X2lkIjoiZmJkMzc2NjctMjMwZi00YzViLWIwZjYtMjQzYjAyNjA4ZTExIiwib2Zmc2V0IjoyMH0=",
+    "has_more": true
+  },
+  "meta": {
+    "total_estimate": 4412
+  }
+}
+```
+
 ### GET `/v1.0/mini-apps` (search + filters)
 
 ```bash
 curl -s "$API_BASE/v1.0/mini-apps?q=wallet&category_slug=finance&min_daily_users=100000&min_rating=4.5&launch_within_days=180&min_growth=10&sort_by=growth&sort_order=desc&limit=10" \
   -H "Authorization: Bearer $TOKEN"
+```
+
+```json
+{
+  "data": [
+    {
+      "mini_app_id": "8f33af72-4a15-4b6d-ae56-8ea6a0985262",
+      "name": "Wallet",
+      "slug": "wallet",
+      "category_slug": "finance",
+      "daily_users": 1200000,
+      "total_users": 28000000,
+      "sessions": 54000000,
+      "rating": 4.9,
+      "growth_weekly": 22.3,
+      "launched_at": "2025-10-22"
+    }
+  ],
+  "page": {
+    "next_cursor": null,
+    "has_more": false
+  },
+  "meta": {
+    "total_estimate": 1
+  }
+}
 ```
 
 ### GET `/v1.0/mini-apps/{miniAppId}`

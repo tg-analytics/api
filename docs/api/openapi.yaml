@@ -2083,6 +2083,12 @@ components:
         daily_active_users: { type: integer }
         total_sessions: { type: integer }
         avg_session_seconds: { type: integer }
+        total_mini_apps_delta: { type: [integer, 'null'] }
+        daily_active_users_delta: { type: [integer, 'null'] }
+        daily_active_users_delta_percent: { type: [number, 'null'] }
+        total_sessions_delta: { type: [integer, 'null'] }
+        total_sessions_delta_percent: { type: [number, 'null'] }
+        avg_session_seconds_delta: { type: [integer, 'null'] }
 
     Tracker:
       type: object

@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import (
     auth,
     channels,
+    mini_apps,
     notifications,
     protected,
     public,
@@ -41,6 +42,7 @@ app.include_router(users.router)
 app.include_router(team_members.router)
 app.include_router(notifications.router)
 app.include_router(channels.router)
+app.include_router(mini_apps.router)
 
 
 @app.get("/", tags=["public"])
