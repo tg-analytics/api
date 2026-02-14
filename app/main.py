@@ -8,6 +8,7 @@ from app.api.routes import (
     notifications,
     protected,
     public,
+    rankings,
     signin,
     team_members,
     users,
@@ -43,6 +44,7 @@ app.include_router(team_members.router)
 app.include_router(notifications.router)
 app.include_router(channels.router)
 app.include_router(mini_apps.router)
+app.include_router(rankings.router)
 
 
 @app.get("/", tags=["public"])

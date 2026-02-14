@@ -695,10 +695,7 @@ paths:
       parameters:
         - name: country_code
           in: query
-          schema: { type: string, minLength: 2, maxLength: 2 }
-        - name: snapshot_date
-          in: query
-          schema: { type: string, format: date }
+          schema: { type: string, minLength: 2, maxLength: 2, default: US }
         - $ref: '#/components/parameters/LimitParam'
       responses:
         '200':
@@ -717,10 +714,7 @@ paths:
       parameters:
         - name: category_slug
           in: query
-          schema: { type: string }
-        - name: snapshot_date
-          in: query
-          schema: { type: string, format: date }
+          schema: { type: string, default: technology }
         - $ref: '#/components/parameters/LimitParam'
       responses:
         '200':
@@ -2052,6 +2046,53 @@ components:
         name: { type: string }
         description: { type: [string, 'null'] }
         icon: { type: [string, 'null'] }
+        channels_count: { type: integer }
+        cta_label: { type: string }
+        cta_target: { type: string }
+
+    CountryRankingItem:
+      allOf:
+        - $ref: '#/components/schemas/RankingChannelItem'
+        - type: object
+          properties:
+            context_type: { type: string, enum: [country] }
+            context_label: { type: string }
+            trend_label: { type: string, enum: [growth_7d] }
+            trend_value: { type: [number, 'null'] }
+
+    CategoryRankingItem:
+      allOf:
+        - $ref: '#/components/schemas/RankingChannelItem'
+        - type: object
+          properties:
+            context_type: { type: string, enum: [category] }
+            context_label: { type: string }
+            trend_label: { type: string, enum: [engagement_rate] }
+            trend_value: { type: [number, 'null'] }
+
+    CountryRankingsMeta:
+      type: object
+      properties:
+        country_code: { type: string }
+        country_name: { type: [string, 'null'] }
+        snapshot_date: { type: [string, 'null'], format: date }
+        total_ranked_channels: { type: integer }
+        applied_limit: { type: integer }
+
+    CategoryRankingsMeta:
+      type: object
+      properties:
+        category_slug: { type: string }
+        category_name: { type: [string, 'null'] }
+        snapshot_date: { type: [string, 'null'], format: date }
+        total_ranked_channels: { type: integer }
+        applied_limit: { type: integer }
+
+    RankingCollectionsMeta:
+      type: object
+      properties:
+        total_active_collections: { type: integer }
+        applied_limit: { type: integer }
 
     MiniAppListItem:
       type: object
@@ -2580,16 +2621,16 @@ components:
       properties:
         data:
           type: array
-          items: { $ref: '#/components/schemas/RankingChannelItem' }
-        meta: { $ref: '#/components/schemas/Meta' }
+          items: { $ref: '#/components/schemas/CountryRankingItem' }
+        meta: { $ref: '#/components/schemas/CountryRankingsMeta' }
 
     CategoryRankingsEnvelope:
       type: object
       properties:
         data:
           type: array
-          items: { $ref: '#/components/schemas/RankingChannelItem' }
-        meta: { $ref: '#/components/schemas/Meta' }
+          items: { $ref: '#/components/schemas/CategoryRankingItem' }
+        meta: { $ref: '#/components/schemas/CategoryRankingsMeta' }
 
     RankingCollectionsEnvelope:
       type: object
@@ -2597,7 +2638,7 @@ components:
         data:
           type: array
           items: { $ref: '#/components/schemas/RankingCollection' }
-        meta: { $ref: '#/components/schemas/Meta' }
+        meta: { $ref: '#/components/schemas/RankingCollectionsMeta' }
 
     CollectionChannelsEnvelope:
       type: object

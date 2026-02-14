@@ -648,13 +648,6 @@ curl -s "$API_BASE/v1.0/rankings/countries?country_code=US&limit=10" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### GET `/v1.0/rankings/countries` (snapshot filter)
-
-```bash
-curl -s "$API_BASE/v1.0/rankings/countries?country_code=US&snapshot_date=2026-02-14&limit=10" \
-  -H "Authorization: Bearer $TOKEN"
-```
-
 ### GET `/v1.0/rankings/categories` (base list)
 
 ```bash
@@ -662,24 +655,10 @@ curl -s "$API_BASE/v1.0/rankings/categories?category_slug=technology&limit=10" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### GET `/v1.0/rankings/categories` (snapshot filter)
-
-```bash
-curl -s "$API_BASE/v1.0/rankings/categories?category_slug=technology&snapshot_date=2026-02-14&limit=10" \
-  -H "Authorization: Bearer $TOKEN"
-```
-
 ### GET `/v1.0/rankings/collections` (base)
 
 ```bash
 curl -s "$API_BASE/v1.0/rankings/collections?limit=20" \
-  -H "Authorization: Bearer $TOKEN"
-```
-
-### GET `/v1.0/rankings/collections` (paginated)
-
-```bash
-curl -s "$API_BASE/v1.0/rankings/collections?limit=20&cursor=eyJvZmZzZXQiOjIwfQ==" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
