@@ -1,7 +1,16 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import auth, protected, public, signin, users, team_members, notifications
+from app.api.routes import (
+    auth,
+    channels,
+    notifications,
+    protected,
+    public,
+    signin,
+    team_members,
+    users,
+)
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -31,6 +40,7 @@ app.include_router(signin.router)
 app.include_router(users.router)
 app.include_router(team_members.router)
 app.include_router(notifications.router)
+app.include_router(channels.router)
 
 
 @app.get("/", tags=["public"])
