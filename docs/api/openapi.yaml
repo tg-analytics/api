@@ -1,0 +1,2675 @@
+openapi: 3.1.0
+info:
+  title: Telegram Pulse API
+  version: 1.0.0
+  summary: Curated REST contract for UU integration on top of custom auth.
+  description: |
+    Multi-tenant API for Telegram analytics, ads intelligence, trackers, rankings,
+    mini apps, account management, team management, billing, and exports.
+servers:
+  - url: https://api.telegrampulse.example.com
+    description: Production
+  - url: https://staging-api.telegrampulse.example.com
+    description: Staging
+security:
+  - bearerAuth: []
+tags:
+  - name: Auth
+  - name: Home
+  - name: Channels
+  - name: Account Channels
+  - name: Ads
+  - name: Advertisers
+  - name: Rankings
+  - name: Mini Apps
+  - name: Trackers
+  - name: Account
+  - name: Team
+  - name: API Keys
+  - name: Billing
+  - name: Exports
+paths:
+  /v1.0/signin:
+    post:
+      tags: [Auth]
+      operationId: requestMagicLink
+      summary: Request magic link for email sign-in.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SigninRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SigninResponse' }
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthError' }
+
+  /v1.0/signin/confirm:
+    post:
+      tags: [Auth]
+      operationId: confirmMagicLink
+      summary: Confirm magic link token and issue JWT.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SigninConfirmRequest' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SigninConfirmResponse' }
+        '400':
+          description: Invalid token/email combination
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthError' }
+
+  /v1.0/signin/google:
+    post:
+      tags: [Auth]
+      operationId: signinWithGoogle
+      summary: Authenticate or sign up user with Google ID token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GoogleSigninRequest' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SigninConfirmResponse' }
+        '400':
+          description: Invalid Google token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthError' }
+
+  /v1.0/home/metrics:
+    get:
+      tags: [Home]
+      operationId: getHomeMetrics
+      summary: Get homepage aggregate metrics.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomeMetricsEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1.0/home/categories:
+    get:
+      tags: [Home]
+      operationId: getHomeCategories
+      summary: Get top categories for homepage catalog block.
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryStatsEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1.0/home/countries:
+    get:
+      tags: [Home]
+      operationId: getHomeCountries
+      summary: Get top countries for homepage market block.
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountryStatsEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1.0/channels:
+    get:
+      tags: [Channels]
+      operationId: listChannels
+      summary: Search and filter channels catalog.
+      parameters:
+        - $ref: '#/components/parameters/QueryParam'
+        - name: country_code
+          in: query
+          schema: { type: string, minLength: 2, maxLength: 2 }
+        - name: category_slug
+          in: query
+          schema: { type: string }
+        - name: size_bucket
+          in: query
+          schema:
+            type: string
+            enum: [small, medium, large, huge]
+        - name: er_min
+          in: query
+          schema: { type: number, minimum: 0, maximum: 100 }
+        - name: er_max
+          in: query
+          schema: { type: number, minimum: 0, maximum: 100 }
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [normal, verified, scam, restricted, deleted]
+        - name: verified
+          in: query
+          schema: { type: boolean }
+        - name: scam
+          in: query
+          schema: { type: boolean }
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [subscribers, growth_24h, growth_7d, growth_30d, engagement_rate, updated_at]
+            default: subscribers
+        - $ref: '#/components/parameters/SortOrderParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelListEnvelope'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1.0/channels/{channelId}:
+    get:
+      tags: [Channels]
+      operationId: getChannel
+      summary: Get channel core detail.
+      parameters:
+        - $ref: '#/components/parameters/ChannelIdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelDetailEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/channels/{channelId}/overview:
+    get:
+      tags: [Channels]
+      operationId: getChannelOverview
+      summary: Get composed overview used on channel page.
+      parameters:
+        - $ref: '#/components/parameters/ChannelIdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelOverviewEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/channels/{channelId}/metrics:
+    get:
+      tags: [Channels]
+      operationId: getChannelMetrics
+      summary: Get timeseries metrics for channel charts.
+      parameters:
+        - $ref: '#/components/parameters/ChannelIdPath'
+        - name: metric
+          in: query
+          schema:
+            type: string
+            enum: [subscribers, views, engagement_rate, posts_per_day]
+            default: subscribers
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [1m, 3m, 6m, 1y, max]
+            default: 1m
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelMetricsEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/channels/{channelId}/posts:
+    get:
+      tags: [Channels]
+      operationId: listChannelPosts
+      summary: List posts for channel detail, including deleted posts.
+      parameters:
+        - $ref: '#/components/parameters/ChannelIdPath'
+        - name: include_deleted
+          in: query
+          schema: { type: boolean, default: true }
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostListEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/channels/{channelId}/similar:
+    get:
+      tags: [Channels]
+      operationId: listSimilarChannels
+      summary: List similar channels.
+      parameters:
+        - $ref: '#/components/parameters/ChannelIdPath'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SimilarChannelsEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/channels/{channelId}/tags:
+    get:
+      tags: [Channels]
+      operationId: listChannelTags
+      summary: List channel tags and weight.
+      parameters:
+        - $ref: '#/components/parameters/ChannelIdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelTagsEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/channels/{channelId}/inout:
+    get:
+      tags: [Channels]
+      operationId: getChannelInOut
+      summary: Get incoming/outgoing subscription dynamics.
+      parameters:
+        - $ref: '#/components/parameters/ChannelIdPath'
+        - name: range
+          in: query
+          schema: { type: string, enum: [7d, 30d, 90d], default: 30d }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelInOutEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/channels/{channelId}/alerts:
+    get:
+      tags: [Channels]
+      operationId: listChannelAlerts
+      summary: List account alerts for channel.
+      parameters:
+        - $ref: '#/components/parameters/AccountHeader'
+        - $ref: '#/components/parameters/ChannelIdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AlertListEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+    post:
+      tags: [Channels]
+      operationId: createChannelAlert
+      summary: Create a channel alert.
+      parameters:
+        - $ref: '#/components/parameters/AccountHeader'
+        - $ref: '#/components/parameters/ChannelIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AlertCreateRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AlertEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1.0/channels/{channelId}/alerts/{alertId}:
+    delete:
+      tags: [Channels]
+      operationId: deleteChannelAlert
+      summary: Delete channel alert.
+      parameters:
+        - $ref: '#/components/parameters/AccountHeader'
+        - $ref: '#/components/parameters/ChannelIdPath'
+        - $ref: '#/components/parameters/AlertIdPath'
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/accounts/{accountId}/channels:
+    get:
+      tags: [Account Channels]
+      operationId: listAccountChannels
+      summary: List channels attached to account.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountChannelListEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+    post:
+      tags: [Account Channels]
+      operationId: addAccountChannel
+      summary: Add channel to account tracking list.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddAccountChannelRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountChannelEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1.0/accounts/{accountId}/channels/insights:
+    get:
+      tags: [Account Channels]
+      operationId: getAccountChannelInsights
+      summary: Aggregate account channel insights.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountChannelInsightsEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1.0/accounts/{accountId}/channels/{channelId}/verification:
+    post:
+      tags: [Account Channels]
+      operationId: createChannelVerificationRequest
+      summary: Start channel verification flow.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+        - $ref: '#/components/parameters/ChannelIdPath'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VerificationRequestCreateRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VerificationRequestEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1.0/accounts/{accountId}/channels/{channelId}/verification/{requestId}/confirm:
+    post:
+      tags: [Account Channels]
+      operationId: confirmChannelVerificationRequest
+      summary: Confirm verification request.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+        - $ref: '#/components/parameters/ChannelIdPath'
+        - $ref: '#/components/parameters/VerificationRequestIdPath'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VerificationConfirmRequest' }
+      responses:
+        '200':
+          description: Confirmed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VerificationRequestEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/ads:
+    get:
+      tags: [Ads]
+      operationId: listAds
+      summary: Search ad creatives.
+      parameters:
+        - $ref: '#/components/parameters/QueryParam'
+        - name: ad_type
+          in: query
+          schema: { type: string, enum: [native, banner, sponsored, bot, mini_app, other] }
+        - name: category_slug
+          in: query
+          schema: { type: string }
+        - name: time_range
+          in: query
+          schema: { type: string, enum: [24h, 7d, 30d, 90d, all], default: 30d }
+        - name: sort_by
+          in: query
+          schema: { type: string, enum: [recent, impressions, engagement, spend], default: recent }
+        - $ref: '#/components/parameters/SortOrderParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdListEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1.0/ads/{adId}:
+    get:
+      tags: [Ads]
+      operationId: getAd
+      summary: Get ad creative detail.
+      parameters:
+        - $ref: '#/components/parameters/AdIdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdDetailEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/ads/summary:
+    get:
+      tags: [Ads]
+      operationId: getAdsSummary
+      summary: Get ads overview metrics.
+      parameters:
+        - name: time_range
+          in: query
+          schema: { type: string, enum: [7d, 30d, 90d], default: 30d }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdsSummaryEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1.0/advertisers:
+    get:
+      tags: [Advertisers]
+      operationId: listAdvertisers
+      summary: Search and filter advertisers.
+      parameters:
+        - $ref: '#/components/parameters/QueryParam'
+        - name: industry_slug
+          in: query
+          schema: { type: string }
+        - name: time_period_days
+          in: query
+          schema: { type: integer, enum: [7, 30, 90, 365], default: 30 }
+        - name: min_spend
+          in: query
+          schema: { type: number, minimum: 0 }
+        - name: min_channels
+          in: query
+          schema: { type: integer, minimum: 0 }
+        - name: min_engagement
+          in: query
+          schema: { type: number, minimum: 0, maximum: 100 }
+        - name: activity_status
+          in: query
+          schema: { type: string, enum: [all, active, recent], default: all }
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [estimated_spend, total_ads, channels_used, avg_engagement_rate, trend]
+            default: estimated_spend
+        - $ref: '#/components/parameters/SortOrderParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdvertiserListEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1.0/advertisers/summary:
+    get:
+      tags: [Advertisers]
+      operationId: getAdvertisersSummary
+      summary: Get advertiser rankings summary cards.
+      parameters:
+        - name: time_period_days
+          in: query
+          schema: { type: integer, enum: [7, 30, 90, 365], default: 30 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdvertiserSummaryEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1.0/advertisers/{advertiserId}:
+    get:
+      tags: [Advertisers]
+      operationId: getAdvertiser
+      summary: Get advertiser detail.
+      parameters:
+        - $ref: '#/components/parameters/AdvertiserIdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdvertiserDetailEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/advertisers/{advertiserId}/ads:
+    get:
+      tags: [Advertisers]
+      operationId: listAdvertiserAds
+      summary: List ad creatives for advertiser.
+      parameters:
+        - $ref: '#/components/parameters/AdvertiserIdPath'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdListEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/advertisers/{advertiserId}/channels:
+    get:
+      tags: [Advertisers]
+      operationId: listAdvertiserChannels
+      summary: List top channels for advertiser.
+      parameters:
+        - $ref: '#/components/parameters/AdvertiserIdPath'
+        - name: snapshot_date
+          in: query
+          schema: { type: string, format: date }
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdvertiserTopChannelsEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/rankings/countries:
+    get:
+      tags: [Rankings]
+      operationId: listCountryRankings
+      summary: Get channel rankings by country.
+      parameters:
+        - name: country_code
+          in: query
+          schema: { type: string, minLength: 2, maxLength: 2 }
+        - name: snapshot_date
+          in: query
+          schema: { type: string, format: date }
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CountryRankingsEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1.0/rankings/categories:
+    get:
+      tags: [Rankings]
+      operationId: listCategoryRankings
+      summary: Get channel rankings by category.
+      parameters:
+        - name: category_slug
+          in: query
+          schema: { type: string }
+        - name: snapshot_date
+          in: query
+          schema: { type: string, format: date }
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CategoryRankingsEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1.0/rankings/collections:
+    get:
+      tags: [Rankings]
+      operationId: listRankingCollections
+      summary: List curated ranking collections.
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RankingCollectionsEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1.0/rankings/collections/{collectionId}/channels:
+    get:
+      tags: [Rankings]
+      operationId: listCollectionChannels
+      summary: List ranked channels for collection.
+      parameters:
+        - $ref: '#/components/parameters/CollectionIdPath'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CollectionChannelsEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/mini-apps/summary:
+    get:
+      tags: [Mini Apps]
+      operationId: getMiniAppsSummary
+      summary: Get mini apps summary cards.
+      parameters:
+        - name: period
+          in: query
+          schema: { type: string, enum: [7d, 30d], default: 7d }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MiniAppsSummaryEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1.0/mini-apps:
+    get:
+      tags: [Mini Apps]
+      operationId: listMiniApps
+      summary: Search and filter mini apps.
+      parameters:
+        - $ref: '#/components/parameters/QueryParam'
+        - name: category_slug
+          in: query
+          schema: { type: string }
+        - name: min_daily_users
+          in: query
+          schema: { type: integer, minimum: 0 }
+        - name: min_rating
+          in: query
+          schema: { type: number, minimum: 0, maximum: 5 }
+        - name: launch_within_days
+          in: query
+          schema: { type: integer, minimum: 1 }
+        - name: min_growth
+          in: query
+          schema: { type: number }
+        - name: sort_by
+          in: query
+          schema: { type: string, enum: [daily_users, growth, rating, launched_at], default: daily_users }
+        - $ref: '#/components/parameters/SortOrderParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MiniAppListEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1.0/mini-apps/{miniAppId}:
+    get:
+      tags: [Mini Apps]
+      operationId: getMiniApp
+      summary: Get mini app detail.
+      parameters:
+        - $ref: '#/components/parameters/MiniAppIdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MiniAppDetailEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/accounts/{accountId}/trackers:
+    get:
+      tags: [Trackers]
+      operationId: listTrackers
+      summary: List account trackers.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, paused, archived] }
+        - name: type
+          in: query
+          schema: { type: string, enum: [keyword, channel] }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TrackerListEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+    post:
+      tags: [Trackers]
+      operationId: createTracker
+      summary: Create tracker.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TrackerCreateRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TrackerEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1.0/accounts/{accountId}/trackers/{trackerId}:
+    patch:
+      tags: [Trackers]
+      operationId: updateTracker
+      summary: Update tracker status/settings.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+        - $ref: '#/components/parameters/TrackerIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TrackerUpdateRequest' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TrackerEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+    delete:
+      tags: [Trackers]
+      operationId: deleteTracker
+      summary: Delete tracker.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+        - $ref: '#/components/parameters/TrackerIdPath'
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/accounts/{accountId}/tracker-mentions:
+    get:
+      tags: [Trackers]
+      operationId: listTrackerMentions
+      summary: Polling endpoint for mentions feed.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+        - name: tracker_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: since
+          in: query
+          schema: { type: string, format: date-time }
+        - name: until
+          in: query
+          schema: { type: string, format: date-time }
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TrackerMentionListEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1.0/me:
+    get:
+      tags: [Account]
+      operationId: getMe
+      summary: Get current user profile.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+    patch:
+      tags: [Account]
+      operationId: updateMe
+      summary: Update profile fields.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MeUpdateRequest' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1.0/me/password:
+    post:
+      tags: [Account]
+      operationId: changePassword
+      summary: Change account password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangePasswordRequest' }
+      responses:
+        '204': { description: Password changed }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1.0/me/preferences:
+    get:
+      tags: [Account]
+      operationId: getMyPreferences
+      summary: Get user preferences.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserPreferencesEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+    patch:
+      tags: [Account]
+      operationId: updateMyPreferences
+      summary: Update user preferences.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserPreferencesUpdateRequest' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserPreferencesEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1.0/me/notifications:
+    get:
+      tags: [Account]
+      operationId: getMyNotifications
+      summary: Get notification settings.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationSettingsEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+    patch:
+      tags: [Account]
+      operationId: updateMyNotifications
+      summary: Update notification settings.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NotificationSettingsUpdateRequest' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationSettingsEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1.0/accounts/{accountId}/members:
+    get:
+      tags: [Team]
+      operationId: listAccountMembers
+      summary: List account members.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberListEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1.0/accounts/{accountId}/members/invitations:
+    post:
+      tags: [Team]
+      operationId: inviteAccountMember
+      summary: Invite member to account.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MemberInvitationRequest' }
+      responses:
+        '201':
+          description: Invitation created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberInvitationEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1.0/accounts/{accountId}/members/{memberId}:
+    patch:
+      tags: [Team]
+      operationId: updateAccountMember
+      summary: Update role/status for member.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+        - $ref: '#/components/parameters/MemberIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MemberUpdateRequest' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+    delete:
+      tags: [Team]
+      operationId: removeAccountMember
+      summary: Remove member from account.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+        - $ref: '#/components/parameters/MemberIdPath'
+      responses:
+        '204': { description: Removed }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/accounts/{accountId}/members/{memberId}/channel-access:
+    put:
+      tags: [Team]
+      operationId: setMemberChannelAccess
+      summary: Replace channel access matrix for member.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+        - $ref: '#/components/parameters/MemberIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MemberChannelAccessUpdateRequest' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberChannelAccessEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1.0/accounts/{accountId}/api-keys:
+    get:
+      tags: [API Keys]
+      operationId: listApiKeys
+      summary: List account API keys (masked).
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiKeyListEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+    post:
+      tags: [API Keys]
+      operationId: createApiKey
+      summary: Create API key (secret returned once).
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApiKeyCreateRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiKeyCreateEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1.0/accounts/{accountId}/api-keys/{apiKeyId}/rotate:
+    post:
+      tags: [API Keys]
+      operationId: rotateApiKey
+      summary: Rotate API key secret.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+        - $ref: '#/components/parameters/ApiKeyIdPath'
+      responses:
+        '200':
+          description: Rotated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiKeyCreateEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/accounts/{accountId}/api-keys/{apiKeyId}:
+    delete:
+      tags: [API Keys]
+      operationId: deleteApiKey
+      summary: Revoke API key.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+        - $ref: '#/components/parameters/ApiKeyIdPath'
+      responses:
+        '204': { description: Revoked }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/accounts/{accountId}/api-usage:
+    get:
+      tags: [API Keys]
+      operationId: getApiUsage
+      summary: Get API usage aggregates for account.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiUsageEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1.0/accounts/{accountId}/subscription:
+    get:
+      tags: [Billing]
+      operationId: getAccountSubscription
+      summary: Get active subscription.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+    patch:
+      tags: [Billing]
+      operationId: updateAccountSubscription
+      summary: Change subscription plan/options.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubscriptionUpdateRequest' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1.0/accounts/{accountId}/usage:
+    get:
+      tags: [Billing]
+      operationId: getAccountUsage
+      summary: Get account usage counters.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountUsageEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1.0/accounts/{accountId}/payment-methods:
+    get:
+      tags: [Billing]
+      operationId: listPaymentMethods
+      summary: List payment methods.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentMethodListEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+    post:
+      tags: [Billing]
+      operationId: addPaymentMethod
+      summary: Attach payment method token.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PaymentMethodCreateRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentMethodEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1.0/accounts/{accountId}/invoices:
+    get:
+      tags: [Billing]
+      operationId: listInvoices
+      summary: List account invoices.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvoiceListEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1.0/accounts/{accountId}/invoices/{invoiceId}/download-url:
+    get:
+      tags: [Billing]
+      operationId: getInvoiceDownloadUrl
+      summary: Generate signed URL for invoice PDF.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+        - $ref: '#/components/parameters/InvoiceIdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvoiceDownloadEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/exports:
+    post:
+      tags: [Exports]
+      operationId: createExportJob
+      summary: Create export job.
+      parameters:
+        - $ref: '#/components/parameters/AccountHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExportCreateRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExportJobEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1.0/exports/{exportId}:
+    get:
+      tags: [Exports]
+      operationId: getExportJob
+      summary: Get export job status.
+      parameters:
+        - $ref: '#/components/parameters/AccountHeader'
+        - $ref: '#/components/parameters/ExportIdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExportJobEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1.0/exports/{exportId}/download:
+    get:
+      tags: [Exports]
+      operationId: getExportDownloadUrl
+      summary: Get signed URL for completed export.
+      parameters:
+        - $ref: '#/components/parameters/AccountHeader'
+        - $ref: '#/components/parameters/ExportIdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExportDownloadEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    AccountHeader:
+      name: X-Account-Id
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+      description: Account context. Must match path accountId when both are present.
+    AccountPath:
+      name: accountId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ChannelIdPath:
+      name: channelId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AlertIdPath:
+      name: alertId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    VerificationRequestIdPath:
+      name: requestId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AdIdPath:
+      name: adId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AdvertiserIdPath:
+      name: advertiserId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    CollectionIdPath:
+      name: collectionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    MiniAppIdPath:
+      name: miniAppId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    TrackerIdPath:
+      name: trackerId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    MemberIdPath:
+      name: memberId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ApiKeyIdPath:
+      name: apiKeyId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    InvoiceIdPath:
+      name: invoiceId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ExportIdPath:
+      name: exportId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    QueryParam:
+      name: q
+      in: query
+      schema: { type: string }
+    LimitParam:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 20 }
+    CursorParam:
+      name: cursor
+      in: query
+      schema: { type: string }
+    SortOrderParam:
+      name: sort_order
+      in: query
+      schema: { type: string, enum: [asc, desc], default: desc }
+
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            error:
+              code: unauthorized
+              message: Missing or invalid bearer token.
+              details: []
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            error:
+              code: forbidden
+              message: You do not have access to this account resource.
+              details: []
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            error:
+              code: not_found
+              message: Resource was not found.
+              details: []
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            error:
+              code: validation_error
+              message: Request validation failed.
+              details:
+                - field: er_min
+                  issue: er_min must be less than or equal to er_max
+
+  schemas:
+    AuthError:
+      type: object
+      required: [detail]
+      properties:
+        detail: { type: string }
+
+    SigninRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+
+    SigninResponse:
+      type: object
+      required: [token, expires_at]
+      properties:
+        token: { type: string }
+        expires_at: { type: string, format: date-time }
+
+    SigninConfirmRequest:
+      type: object
+      required: [email, token]
+      properties:
+        email: { type: string, format: email }
+        token: { type: string }
+
+    GoogleSigninRequest:
+      type: object
+      required: [id_token]
+      properties:
+        id_token: { type: string }
+        account_id: { type: string, format: uuid }
+
+    AuthUser:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        name: { type: string }
+        role: { type: string }
+        status: { type: string }
+        is_guest: { type: boolean }
+
+    SigninConfirmResponse:
+      type: object
+      required: [access_token, token_type, expires_at, user]
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, enum: [bearer] }
+        expires_at: { type: string, format: date-time }
+        account_id: { type: [string, 'null'], format: uuid }
+        user: { $ref: '#/components/schemas/AuthUser' }
+
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, details]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+
+    Page:
+      type: object
+      required: [next_cursor, has_more]
+      properties:
+        next_cursor:
+          type: [string, 'null']
+        has_more:
+          type: boolean
+
+    Meta:
+      type: object
+      additionalProperties: true
+
+    HomeMetrics:
+      type: object
+      properties:
+        channels_indexed: { type: integer }
+        posts_analyzed: { type: integer }
+        ad_creatives: { type: integer }
+        mini_apps: { type: integer }
+
+    CategoryStat:
+      type: object
+      properties:
+        slug: { type: string }
+        name: { type: string }
+        channels_count: { type: integer }
+
+    CountryStat:
+      type: object
+      properties:
+        code: { type: string }
+        name: { type: string }
+        flag_emoji: { type: string }
+        channels_count: { type: integer }
+
+    ChannelListItem:
+      type: object
+      properties:
+        channel_id: { type: string, format: uuid }
+        name: { type: string }
+        username: { type: [string, 'null'] }
+        subscribers: { type: integer }
+        growth_24h: { type: [number, 'null'] }
+        growth_7d: { type: [number, 'null'] }
+        growth_30d: { type: [number, 'null'] }
+        engagement_rate: { type: [number, 'null'] }
+        category_slug: { type: [string, 'null'] }
+        category_name: { type: [string, 'null'] }
+        country_code: { type: [string, 'null'] }
+        status: { type: string }
+        verified: { type: boolean }
+        scam: { type: boolean }
+
+    ChannelDetail:
+      allOf:
+        - $ref: '#/components/schemas/ChannelListItem'
+        - type: object
+          properties:
+            telegram_channel_id: { type: integer }
+            description: { type: [string, 'null'] }
+            posts_per_day: { type: [number, 'null'] }
+            avg_views: { type: [integer, 'null'] }
+
+    ChannelOverview:
+      type: object
+      properties:
+        channel: { $ref: '#/components/schemas/ChannelDetail' }
+        incoming_30d: { type: integer }
+        outgoing_30d: { type: integer }
+        tags:
+          type: array
+          items: { $ref: '#/components/schemas/TagStat' }
+        similar_channels:
+          type: array
+          items: { $ref: '#/components/schemas/SimilarChannel' }
+
+    ChannelMetricPoint:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        subscribers: { type: [integer, 'null'] }
+        views: { type: [integer, 'null'] }
+        engagement_rate: { type: [number, 'null'] }
+        posts_per_day: { type: [number, 'null'] }
+
+    PostSummary:
+      type: object
+      properties:
+        post_id: { type: string, format: uuid }
+        telegram_message_id: { type: integer }
+        published_at: { type: string, format: date-time }
+        deleted_at: { type: [string, 'null'], format: date-time }
+        is_deleted: { type: boolean }
+        content_text: { type: [string, 'null'] }
+        views_count: { type: integer }
+        reactions_count: { type: integer }
+        comments_count: { type: integer }
+        forwards_count: { type: integer }
+
+    SimilarChannel:
+      type: object
+      properties:
+        channel_id: { type: string, format: uuid }
+        name: { type: string }
+        username: { type: [string, 'null'] }
+        subscribers: { type: [integer, 'null'] }
+        similarity_score: { type: number }
+
+    TagStat:
+      type: object
+      properties:
+        tag_id: { type: string, format: uuid }
+        slug: { type: string }
+        name: { type: string }
+        count: { type: integer }
+
+    InOutPoint:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        incoming_subscribers: { type: integer }
+        outgoing_subscribers: { type: integer }
+
+    Alert:
+      type: object
+      properties:
+        alert_id: { type: string, format: uuid }
+        channel_id: { type: string, format: uuid }
+        name: { type: string }
+        alert_type: { type: string }
+        threshold_value: { type: [number, 'null'] }
+        keyword: { type: [string, 'null'] }
+        is_active: { type: boolean }
+        notify_email: { type: boolean }
+        notify_telegram: { type: boolean }
+        notify_push: { type: boolean }
+
+    AlertCreateRequest:
+      type: object
+      required: [name, alert_type]
+      properties:
+        name: { type: string }
+        alert_type:
+          type: string
+          enum: [keyword, threshold, status_change, new_post, engagement_drop, growth_spike]
+        threshold_value: { type: number }
+        keyword: { type: string }
+        notify_email: { type: boolean, default: true }
+        notify_telegram: { type: boolean, default: true }
+        notify_push: { type: boolean, default: false }
+
+    AccountChannel:
+      type: object
+      properties:
+        account_id: { type: string, format: uuid }
+        channel_id: { type: string, format: uuid }
+        alias_name: { type: [string, 'null'] }
+        monitoring_enabled: { type: boolean }
+        is_favorite: { type: boolean }
+        added_at: { type: string, format: date-time }
+
+    AddAccountChannelRequest:
+      type: object
+      required: [channel_id]
+      properties:
+        channel_id: { type: string, format: uuid }
+        alias_name: { type: string }
+        monitoring_enabled: { type: boolean, default: true }
+        is_favorite: { type: boolean, default: false }
+
+    AccountChannelInsights:
+      type: object
+      properties:
+        total_subscribers: { type: integer }
+        total_views: { type: integer }
+        avg_engagement_rate: { type: number }
+        channels_count: { type: integer }
+
+    VerificationRequest:
+      type: object
+      properties:
+        request_id: { type: string, format: uuid }
+        account_id: { type: string, format: uuid }
+        channel_id: { type: string, format: uuid }
+        verification_code: { type: string }
+        verification_method: { type: string }
+        status: { type: string }
+        requested_at: { type: string, format: date-time }
+        confirmed_at: { type: [string, 'null'], format: date-time }
+        expires_at: { type: string, format: date-time }
+
+    VerificationRequestCreateRequest:
+      type: object
+      properties:
+        verification_method:
+          type: string
+          enum: [description_code, bot_admin, manual_review]
+          default: description_code
+
+    VerificationConfirmRequest:
+      type: object
+      properties:
+        evidence:
+          type: object
+          additionalProperties: true
+
+    AdListItem:
+      type: object
+      properties:
+        ad_id: { type: string, format: uuid }
+        advertiser_id: { type: string, format: uuid }
+        advertiser_name: { type: string }
+        channel_id: { type: [string, 'null'], format: uuid }
+        channel_name: { type: [string, 'null'] }
+        preview_text: { type: [string, 'null'] }
+        ad_type: { type: string }
+        media_type: { type: string }
+        category_slug: { type: [string, 'null'] }
+        posted_at: { type: [string, 'null'], format: date-time }
+        impressions: { type: [integer, 'null'] }
+        engagement_rate: { type: [number, 'null'] }
+
+    AdDetail:
+      allOf:
+        - $ref: '#/components/schemas/AdListItem'
+        - type: object
+          properties:
+            headline: { type: [string, 'null'] }
+            body_text: { type: [string, 'null'] }
+            destination_url: { type: [string, 'null'] }
+            cta_text: { type: [string, 'null'] }
+            spend: { type: [number, 'null'] }
+            ctr: { type: [number, 'null'] }
+
+    AdsSummary:
+      type: object
+      properties:
+        active_advertisers: { type: integer }
+        total_ad_spend: { type: number }
+        ad_campaigns: { type: integer }
+        avg_engagement_rate: { type: number }
+
+    AdvertiserListItem:
+      type: object
+      properties:
+        advertiser_id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        industry_slug: { type: [string, 'null'] }
+        estimated_spend: { type: [number, 'null'] }
+        total_ads: { type: [integer, 'null'] }
+        channels_used: { type: [integer, 'null'] }
+        avg_engagement_rate: { type: [number, 'null'] }
+        trend: { type: [number, 'null'] }
+        active_creatives: { type: [integer, 'null'] }
+
+    AdvertiserDetail:
+      allOf:
+        - $ref: '#/components/schemas/AdvertiserListItem'
+        - type: object
+          properties:
+            website_url: { type: [string, 'null'] }
+            description: { type: [string, 'null'] }
+            top_channels:
+              type: array
+              items: { $ref: '#/components/schemas/AdvertiserTopChannel' }
+
+    AdvertiserTopChannel:
+      type: object
+      properties:
+        channel_id: { type: string, format: uuid }
+        name: { type: string }
+        username: { type: [string, 'null'] }
+        rank: { type: integer }
+        impressions: { type: [integer, 'null'] }
+        estimated_spend: { type: [number, 'null'] }
+
+    AdvertiserSummary:
+      type: object
+      properties:
+        active_advertisers: { type: integer }
+        total_ad_spend: { type: number }
+        ad_campaigns: { type: integer }
+        avg_engagement_rate: { type: number }
+
+    RankingChannelItem:
+      type: object
+      properties:
+        rank: { type: integer }
+        channel_id: { type: string, format: uuid }
+        name: { type: string }
+        username: { type: [string, 'null'] }
+        subscribers: { type: [integer, 'null'] }
+        growth_7d: { type: [number, 'null'] }
+        engagement_rate: { type: [number, 'null'] }
+
+    RankingCollection:
+      type: object
+      properties:
+        collection_id: { type: string, format: uuid }
+        slug: { type: string }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        icon: { type: [string, 'null'] }
+
+    MiniAppListItem:
+      type: object
+      properties:
+        mini_app_id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        category_slug: { type: [string, 'null'] }
+        daily_users: { type: [integer, 'null'] }
+        total_users: { type: [integer, 'null'] }
+        sessions: { type: [integer, 'null'] }
+        rating: { type: [number, 'null'] }
+        growth_weekly: { type: [number, 'null'] }
+        launched_at: { type: [string, 'null'], format: date }
+
+    MiniAppDetail:
+      allOf:
+        - $ref: '#/components/schemas/MiniAppListItem'
+        - type: object
+          properties:
+            description: { type: [string, 'null'] }
+            icon_url: { type: [string, 'null'] }
+            avg_session_seconds: { type: [integer, 'null'] }
+
+    MiniAppsSummary:
+      type: object
+      properties:
+        total_mini_apps: { type: integer }
+        daily_active_users: { type: integer }
+        total_sessions: { type: integer }
+        avg_session_seconds: { type: integer }
+
+    Tracker:
+      type: object
+      properties:
+        tracker_id: { type: string, format: uuid }
+        account_id: { type: string, format: uuid }
+        tracker_type: { type: string, enum: [keyword, channel] }
+        tracker_value: { type: string }
+        status: { type: string, enum: [active, paused, archived] }
+        mentions_count: { type: integer }
+        last_activity_at: { type: [string, 'null'], format: date-time }
+        notify_push: { type: boolean }
+        notify_telegram: { type: boolean }
+        notify_email: { type: boolean }
+
+    TrackerCreateRequest:
+      type: object
+      required: [tracker_type, tracker_value]
+      properties:
+        tracker_type: { type: string, enum: [keyword, channel] }
+        tracker_value: { type: string }
+        notify_push: { type: boolean, default: true }
+        notify_telegram: { type: boolean, default: true }
+        notify_email: { type: boolean, default: false }
+
+    TrackerUpdateRequest:
+      type: object
+      properties:
+        status: { type: string, enum: [active, paused, archived] }
+        notify_push: { type: boolean }
+        notify_telegram: { type: boolean }
+        notify_email: { type: boolean }
+
+    TrackerMention:
+      type: object
+      properties:
+        mention_id: { type: string, format: uuid }
+        tracker_id: { type: string, format: uuid }
+        mention_seq: { type: integer }
+        channel_id: { type: [string, 'null'], format: uuid }
+        channel_name: { type: [string, 'null'] }
+        post_id: { type: [string, 'null'], format: uuid }
+        mention_text: { type: string }
+        context_snippet: { type: [string, 'null'] }
+        mentioned_at: { type: string, format: date-time }
+
+    MeProfile:
+      type: object
+      properties:
+        user_id: { type: string, format: uuid }
+        first_name: { type: [string, 'null'] }
+        last_name: { type: [string, 'null'] }
+        full_name: { type: [string, 'null'] }
+        email: { type: [string, 'null'], format: email }
+        telegram_username: { type: [string, 'null'] }
+        avatar_url: { type: [string, 'null'] }
+
+    MeUpdateRequest:
+      type: object
+      properties:
+        first_name: { type: string }
+        last_name: { type: string }
+        full_name: { type: string }
+        telegram_username: { type: string }
+        avatar_url: { type: string }
+
+    ChangePasswordRequest:
+      type: object
+      required: [current_password, new_password]
+      properties:
+        current_password: { type: string }
+        new_password: { type: string, minLength: 8 }
+
+    UserPreferences:
+      type: object
+      properties:
+        language_code: { type: string }
+        timezone: { type: string }
+        theme: { type: string, enum: [light, dark, system] }
+
+    UserPreferencesUpdateRequest:
+      type: object
+      properties:
+        language_code: { type: string }
+        timezone: { type: string }
+        theme: { type: string, enum: [light, dark, system] }
+
+    NotificationSettings:
+      type: object
+      properties:
+        email_notifications: { type: boolean }
+        telegram_bot_alerts: { type: boolean }
+        weekly_reports: { type: boolean }
+        marketing_updates: { type: boolean }
+        push_notifications: { type: boolean }
+
+    NotificationSettingsUpdateRequest:
+      type: object
+      properties:
+        email_notifications: { type: boolean }
+        telegram_bot_alerts: { type: boolean }
+        weekly_reports: { type: boolean }
+        marketing_updates: { type: boolean }
+        push_notifications: { type: boolean }
+
+    AccountMember:
+      type: object
+      properties:
+        member_id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        email: { type: [string, 'null'], format: email }
+        full_name: { type: [string, 'null'] }
+        role: { type: string, enum: [owner, admin, editor, viewer] }
+        status: { type: string }
+
+    MemberInvitationRequest:
+      type: object
+      required: [email, role]
+      properties:
+        email: { type: string, format: email }
+        role: { type: string, enum: [admin, editor, viewer] }
+        channel_access:
+          type: array
+          items: { type: string, format: uuid }
+
+    MemberInvitation:
+      type: object
+      properties:
+        invitation_id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        role: { type: string }
+        status: { type: string }
+        expires_at: { type: string, format: date-time }
+
+    MemberUpdateRequest:
+      type: object
+      properties:
+        role: { type: string, enum: [admin, editor, viewer] }
+        status: { type: string, enum: [active, suspended] }
+
+    MemberChannelAccessUpdateRequest:
+      type: object
+      required: [channels]
+      properties:
+        channels:
+          type: array
+          items:
+            type: object
+            required: [channel_id, access_level]
+            properties:
+              channel_id: { type: string, format: uuid }
+              access_level: { type: string, enum: [viewer, editor, admin] }
+
+    MemberChannelAccess:
+      type: object
+      properties:
+        member_id: { type: string, format: uuid }
+        channels:
+          type: array
+          items:
+            type: object
+            properties:
+              channel_id: { type: string, format: uuid }
+              access_level: { type: string }
+
+    ApiKeyListItem:
+      type: object
+      properties:
+        api_key_id: { type: string, format: uuid }
+        name: { type: string }
+        key_prefix: { type: string }
+        scopes:
+          type: array
+          items: { type: string }
+        rate_limit_per_hour: { type: integer }
+        created_at: { type: string, format: date-time }
+        last_used_at: { type: [string, 'null'], format: date-time }
+        revoked_at: { type: [string, 'null'], format: date-time }
+
+    ApiKeyCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        scopes:
+          type: array
+          items: { type: string }
+        rate_limit_per_hour: { type: integer, minimum: 1 }
+
+    ApiKeyCreateResponse:
+      type: object
+      properties:
+        api_key:
+          $ref: '#/components/schemas/ApiKeyListItem'
+        secret:
+          type: string
+          description: Returned once only at create/rotate time.
+
+    ApiUsage:
+      type: object
+      properties:
+        total_requests: { type: integer }
+        error_rate: { type: number }
+        avg_latency_ms: { type: number }
+        by_day:
+          type: array
+          items:
+            type: object
+            properties:
+              date: { type: string, format: date }
+              requests: { type: integer }
+              errors: { type: integer }
+
+    Subscription:
+      type: object
+      properties:
+        subscription_id: { type: string, format: uuid }
+        account_id: { type: string, format: uuid }
+        plan_code: { type: string }
+        status: { type: string }
+        billing_state: { type: string }
+        current_period_start: { type: [string, 'null'], format: date-time }
+        current_period_end: { type: [string, 'null'], format: date-time }
+        cancel_at_period_end: { type: boolean }
+
+    SubscriptionUpdateRequest:
+      type: object
+      properties:
+        plan_code: { type: string }
+        cancel_at_period_end: { type: boolean }
+
+    AccountUsage:
+      type: object
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        channel_searches: { type: integer }
+        event_trackers_count: { type: integer }
+        api_requests_count: { type: integer }
+        exports_count: { type: integer }
+
+    PaymentMethod:
+      type: object
+      properties:
+        payment_method_id: { type: string, format: uuid }
+        brand: { type: [string, 'null'] }
+        last4: { type: [string, 'null'] }
+        exp_month: { type: [integer, 'null'] }
+        exp_year: { type: [integer, 'null'] }
+        is_default: { type: boolean }
+        status: { type: string }
+
+    PaymentMethodCreateRequest:
+      type: object
+      required: [provider_payment_method_token]
+      properties:
+        provider_payment_method_token: { type: string }
+        make_default: { type: boolean, default: true }
+
+    Invoice:
+      type: object
+      properties:
+        invoice_id: { type: string, format: uuid }
+        invoice_number: { type: [string, 'null'] }
+        status: { type: string }
+        currency: { type: string }
+        amount_total: { type: number }
+        period_start: { type: [string, 'null'], format: date }
+        period_end: { type: [string, 'null'], format: date }
+        issued_at: { type: [string, 'null'], format: date-time }
+        paid_at: { type: [string, 'null'], format: date-time }
+
+    InvoiceDownload:
+      type: object
+      properties:
+        url: { type: string, format: uri }
+        expires_at: { type: string, format: date-time }
+
+    ExportCreateRequest:
+      type: object
+      required: [export_type]
+      properties:
+        export_type:
+          type: string
+          enum: [channels_csv, ads_csv, advertisers_csv, invoices_csv, posts_csv, mini_apps_csv, custom]
+        filters:
+          type: object
+          additionalProperties: true
+
+    ExportJob:
+      type: object
+      properties:
+        export_id: { type: string, format: uuid }
+        account_id: { type: string, format: uuid }
+        export_type: { type: string }
+        status: { type: string }
+        created_at: { type: string, format: date-time }
+        started_at: { type: [string, 'null'], format: date-time }
+        completed_at: { type: [string, 'null'], format: date-time }
+        file_size_bytes: { type: [integer, 'null'] }
+
+    ExportDownload:
+      type: object
+      properties:
+        url: { type: string, format: uri }
+        expires_at: { type: string, format: date-time }
+
+    HomeMetricsEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/HomeMetrics' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    CategoryStatsEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/CategoryStat' }
+        page: { $ref: '#/components/schemas/Page' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    CountryStatsEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/CountryStat' }
+        page: { $ref: '#/components/schemas/Page' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    ChannelListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ChannelListItem' }
+        page: { $ref: '#/components/schemas/Page' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    ChannelDetailEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/ChannelDetail' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    ChannelOverviewEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/ChannelOverview' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    ChannelMetricsEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ChannelMetricPoint' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    PostListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/PostSummary' }
+        page: { $ref: '#/components/schemas/Page' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    SimilarChannelsEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/SimilarChannel' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    ChannelTagsEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/TagStat' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    ChannelInOutEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/InOutPoint' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    AlertEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/Alert' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    AlertListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Alert' }
+        page: { $ref: '#/components/schemas/Page' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    AccountChannelEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/AccountChannel' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    AccountChannelListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/AccountChannel' }
+        page: { $ref: '#/components/schemas/Page' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    AccountChannelInsightsEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/AccountChannelInsights' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    VerificationRequestEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/VerificationRequest' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    AdListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/AdListItem' }
+        page: { $ref: '#/components/schemas/Page' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    AdDetailEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/AdDetail' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    AdsSummaryEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/AdsSummary' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    AdvertiserListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/AdvertiserListItem' }
+        page: { $ref: '#/components/schemas/Page' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    AdvertiserDetailEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/AdvertiserDetail' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    AdvertiserSummaryEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/AdvertiserSummary' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    AdvertiserTopChannelsEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/AdvertiserTopChannel' }
+        page: { $ref: '#/components/schemas/Page' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    CountryRankingsEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/RankingChannelItem' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    CategoryRankingsEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/RankingChannelItem' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    RankingCollectionsEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/RankingCollection' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    CollectionChannelsEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/RankingChannelItem' }
+        page: { $ref: '#/components/schemas/Page' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    MiniAppsSummaryEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/MiniAppsSummary' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    MiniAppListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/MiniAppListItem' }
+        page: { $ref: '#/components/schemas/Page' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    MiniAppDetailEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/MiniAppDetail' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    TrackerEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/Tracker' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    TrackerListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Tracker' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    TrackerMentionListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/TrackerMention' }
+        page: { $ref: '#/components/schemas/Page' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    MeEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/MeProfile' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    UserPreferencesEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/UserPreferences' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    NotificationSettingsEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/NotificationSettings' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    MemberEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/AccountMember' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    MemberListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/AccountMember' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    MemberInvitationEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/MemberInvitation' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    MemberChannelAccessEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/MemberChannelAccess' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    ApiKeyListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ApiKeyListItem' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    ApiKeyCreateEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/ApiKeyCreateResponse' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    ApiUsageEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/ApiUsage' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    SubscriptionEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/Subscription' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    AccountUsageEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/AccountUsage' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    PaymentMethodEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/PaymentMethod' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    PaymentMethodListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/PaymentMethod' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    InvoiceListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Invoice' }
+        page: { $ref: '#/components/schemas/Page' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    InvoiceDownloadEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/InvoiceDownload' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    ExportJobEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/ExportJob' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    ExportDownloadEnvelope:
+      type: object
+      properties:
+        data: { $ref: '#/components/schemas/ExportDownload' }
+        meta: { $ref: '#/components/schemas/Meta' }

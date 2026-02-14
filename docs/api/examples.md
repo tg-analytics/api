@@ -1,0 +1,1308 @@
+# Telegram Pulse API Examples
+
+This document provides request/response examples for all `/v1.0` endpoints in `/Users/mac/Documents/EP/tganalytics/telegram-pulse/docs/api/openapi.yaml`.
+
+## Conventions
+
+Base URL:
+
+```bash
+export API_BASE="https://api.telegrampulse.example.com"
+```
+
+Auth + account headers:
+
+```bash
+export TOKEN="<custom_jwt>"
+export ACCOUNT_ID="11111111-1111-1111-1111-111111111111"
+```
+
+Standard response envelope:
+
+```json
+{
+  "data": {},
+  "page": { "next_cursor": null, "has_more": false },
+  "meta": {}
+}
+```
+
+Standard error envelope:
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Request validation failed.",
+    "details": [{ "field": "q", "issue": "q must be <= 100 chars" }]
+  }
+}
+```
+
+---
+
+## Auth
+
+### POST `/v1.0/signin` (request magic link)
+
+```bash
+curl -s -X POST "$API_BASE/v1.0/signin" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "microsaas.farm@gmail.com"
+  }'
+```
+
+```json
+{
+  "token": "b0cfbda7-68a5-4331-a47b-e7de0310a02a",
+  "expires_at": "2025-12-25T15:00:00Z"
+}
+```
+
+### POST `/v1.0/signin/confirm` (confirm magic link)
+
+```bash
+curl -s -X POST "$API_BASE/v1.0/signin/confirm" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "microsaas.farm@gmail.com",
+    "token": "b0cfbda7-68a5-4331-a47b-e7de0310a02a"
+  }'
+```
+
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "expires_at": "2026-01-15T14:09:53.119669Z",
+  "user": {
+    "id": "af2a103b-1e52-457a-af33-c5b2f9c4e2e3",
+    "email": "microsaas.farm@gmail.com",
+    "name": "microsaas.farm",
+    "role": "USER",
+    "status": "ACTIVE",
+    "is_guest": false
+  }
+}
+```
+
+### POST `/v1.0/signin/google` (Google SSO)
+
+```bash
+curl -s -X POST "$API_BASE/v1.0/signin/google" \
+  -H "Content-Type: application/json" \
+  -d "{\"id_token\":\"<google_id_token>\",\"account_id\":\"$ACCOUNT_ID\"}"
+```
+
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "expires_at": "2026-01-15T14:09:53.119669Z",
+  "account_id": "11111111-1111-1111-1111-111111111111",
+  "user": {
+    "id": "af2a103b-1e52-457a-af33-c5b2f9c4e2e3",
+    "email": "microsaas.farm@gmail.com",
+    "name": "microsaas.farm",
+    "role": "USER",
+    "status": "ACTIVE",
+    "is_guest": false
+  }
+}
+```
+
+### Auth Error Responses
+
+Invalid token:
+
+```json
+{ "detail": "Invalid or expired token" }
+```
+
+Token mismatch:
+
+```json
+{ "detail": "Token does not match the provided email" }
+```
+
+Token already used:
+
+```json
+{ "detail": "Token has already been used" }
+```
+
+Expired token:
+
+```json
+{ "detail": "Token has expired" }
+```
+
+---
+
+## Home
+
+### GET `/v1.0/home/metrics`
+
+```bash
+curl -s "$API_BASE/v1.0/home/metrics" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+```json
+{
+  "data": {
+    "channels_indexed": 11000000,
+    "posts_analyzed": 72000000000,
+    "ad_creatives": 88000000,
+    "mini_apps": 4412
+  },
+  "meta": { "generated_at": "2026-02-14T10:00:00Z" }
+}
+```
+
+### GET `/v1.0/home/categories` (base)
+
+```bash
+curl -s "$API_BASE/v1.0/home/categories?limit=5" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/home/categories` (paginated)
+
+```bash
+curl -s "$API_BASE/v1.0/home/categories?limit=5&cursor=eyJvZmZzZXQiOjV9" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/home/countries` (base)
+
+```bash
+curl -s "$API_BASE/v1.0/home/countries?limit=5" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/home/countries` (paginated)
+
+```bash
+curl -s "$API_BASE/v1.0/home/countries?limit=5&cursor=eyJvZmZzZXQiOjV9" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+## Channels
+
+### GET `/v1.0/channels` (base list)
+
+```bash
+curl -s "$API_BASE/v1.0/channels?limit=20&sort_by=subscribers&sort_order=desc" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+```json
+{
+  "data": [
+    {
+      "channel_id": "9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2",
+      "name": "Tech News Daily",
+      "username": "@technewsdaily",
+      "subscribers": 1300000,
+      "growth_24h": 2.3,
+      "growth_7d": 8.5,
+      "growth_30d": 24.2,
+      "engagement_rate": 4.8,
+      "category_slug": "technology",
+      "country_code": "US",
+      "status": "verified",
+      "verified": true,
+      "scam": false
+    }
+  ],
+  "page": { "next_cursor": "eyJsYXN0X2lkIjoiOWYy...", "has_more": true },
+  "meta": { "total_estimate": 11000000 }
+}
+```
+
+### GET `/v1.0/channels` (search + filters)
+
+```bash
+curl -s "$API_BASE/v1.0/channels?q=crypto&country_code=US&category_slug=cryptocurrencies&size_bucket=large&er_min=3&er_max=10&verified=true&sort_by=growth_7d&sort_order=desc&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/channels/{channelId}`
+
+```bash
+curl -s "$API_BASE/v1.0/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/channels/{channelId}/overview`
+
+```bash
+curl -s "$API_BASE/v1.0/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/overview" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/channels/{channelId}/metrics` (chart)
+
+```bash
+curl -s "$API_BASE/v1.0/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/metrics?metric=subscribers&range=1y" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/channels/{channelId}/metrics` (custom range)
+
+```bash
+curl -s "$API_BASE/v1.0/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/metrics?metric=views&from=2025-10-01&to=2026-02-14" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/channels/{channelId}/posts` (base)
+
+```bash
+curl -s "$API_BASE/v1.0/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/posts?include_deleted=true&limit=20" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/channels/{channelId}/posts` (filtered)
+
+```bash
+curl -s "$API_BASE/v1.0/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/posts?include_deleted=false&from=2026-02-01T00:00:00Z&to=2026-02-14T23:59:59Z&limit=20&cursor=eyJwdWJsaXNoZWRfYXQiOiIyMDI2LTAyLTEzIn0=" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/channels/{channelId}/similar`
+
+```bash
+curl -s "$API_BASE/v1.0/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/similar?limit=5" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/channels/{channelId}/tags`
+
+```bash
+curl -s "$API_BASE/v1.0/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/tags" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/channels/{channelId}/inout`
+
+```bash
+curl -s "$API_BASE/v1.0/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/inout?range=30d" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/channels/{channelId}/alerts` (base list)
+
+```bash
+curl -s "$API_BASE/v1.0/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/alerts" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+### GET `/v1.0/channels/{channelId}/alerts` (filtered in client by active)
+
+```bash
+curl -s "$API_BASE/v1.0/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/alerts" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+### POST `/v1.0/channels/{channelId}/alerts` success
+
+```bash
+curl -s -X POST "$API_BASE/v1.0/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/alerts" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "ER Drop Alert",
+    "alert_type": "threshold",
+    "threshold_value": 2.5,
+    "notify_email": true,
+    "notify_telegram": true,
+    "notify_push": false
+  }'
+```
+
+```json
+{
+  "data": {
+    "alert_id": "51e5d3b7-8f90-4fe9-a2ef-40ddfca170e1",
+    "channel_id": "9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2",
+    "name": "ER Drop Alert",
+    "alert_type": "threshold",
+    "threshold_value": 2.5,
+    "is_active": true,
+    "notify_email": true,
+    "notify_telegram": true,
+    "notify_push": false
+  },
+  "meta": {}
+}
+```
+
+### POST `/v1.0/channels/{channelId}/alerts` validation error
+
+```bash
+curl -s -X POST "$API_BASE/v1.0/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/alerts" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Bad Threshold","alert_type":"threshold"}'
+```
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Request validation failed.",
+    "details": [{ "field": "threshold_value", "issue": "required for threshold alerts" }]
+  }
+}
+```
+
+### DELETE `/v1.0/channels/{channelId}/alerts/{alertId}` success
+
+```bash
+curl -s -X DELETE "$API_BASE/v1.0/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/alerts/51e5d3b7-8f90-4fe9-a2ef-40ddfca170e1" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID" \
+  -i
+```
+
+### DELETE `/v1.0/channels/{channelId}/alerts/{alertId}` forbidden error
+
+```json
+{
+  "error": {
+    "code": "forbidden",
+    "message": "You do not have access to this account resource.",
+    "details": []
+  }
+}
+```
+
+---
+
+## Account Channels + Verification
+
+### GET `/v1.0/accounts/{accountId}/channels` (base)
+
+```bash
+curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/channels?limit=20" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+### GET `/v1.0/accounts/{accountId}/channels` (paginated)
+
+```bash
+curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/channels?limit=20&cursor=eyJsYXN0X2NoYW5uZWxfaWQiOiI5ZjIifQ==" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+### POST `/v1.0/accounts/{accountId}/channels` success
+
+```bash
+curl -s -X POST "$API_BASE/v1.0/accounts/$ACCOUNT_ID/channels" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel_id":"9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2",
+    "alias_name":"Primary Tech Channel",
+    "monitoring_enabled":true,
+    "is_favorite":true
+  }'
+```
+
+### POST `/v1.0/accounts/{accountId}/channels` validation error
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "channel_id is required",
+    "details": []
+  }
+}
+```
+
+### GET `/v1.0/accounts/{accountId}/channels/insights`
+
+```bash
+curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/channels/insights" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+### POST `/v1.0/accounts/{accountId}/channels/{channelId}/verification` success
+
+```bash
+curl -s -X POST "$API_BASE/v1.0/accounts/$ACCOUNT_ID/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/verification" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{"verification_method":"description_code"}'
+```
+
+### POST `/v1.0/accounts/{accountId}/channels/{channelId}/verification` error (pending exists)
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Pending verification already exists for this channel.",
+    "details": []
+  }
+}
+```
+
+### POST `/v1.0/accounts/{accountId}/channels/{channelId}/verification/{requestId}/confirm` success
+
+```bash
+curl -s -X POST "$API_BASE/v1.0/accounts/$ACCOUNT_ID/channels/9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2/verification/2df0f04b-99cb-4d8f-94a2-cbce3a40ab22/confirm" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{"evidence":{"description_contains_code":true}}'
+```
+
+### POST `/v1.0/accounts/{accountId}/channels/{channelId}/verification/{requestId}/confirm` error (expired)
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Verification request expired.",
+    "details": []
+  }
+}
+```
+
+---
+
+## Ads
+
+### GET `/v1.0/ads` (base list)
+
+```bash
+curl -s "$API_BASE/v1.0/ads?limit=20&sort_by=recent&sort_order=desc" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/ads` (search + filters)
+
+```bash
+curl -s "$API_BASE/v1.0/ads?q=bootcamp&ad_type=native&category_slug=technology&time_range=7d&sort_by=impressions&sort_order=desc&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/ads/{adId}`
+
+```bash
+curl -s "$API_BASE/v1.0/ads/3f07ea5b-1a18-4445-ab6f-4f5d79db54f8" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/ads/summary`
+
+```bash
+curl -s "$API_BASE/v1.0/ads/summary?time_range=30d" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+## Advertisers
+
+### GET `/v1.0/advertisers` (base list)
+
+```bash
+curl -s "$API_BASE/v1.0/advertisers?time_period_days=30&sort_by=estimated_spend&sort_order=desc&limit=20" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/advertisers` (search + filters)
+
+```bash
+curl -s "$API_BASE/v1.0/advertisers?q=binance&industry_slug=crypto&time_period_days=30&min_spend=500000&min_channels=100&min_engagement=3&activity_status=active&sort_by=trend&sort_order=desc&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/advertisers/summary`
+
+```bash
+curl -s "$API_BASE/v1.0/advertisers/summary?time_period_days=30" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/advertisers/{advertiserId}`
+
+```bash
+curl -s "$API_BASE/v1.0/advertisers/2e63db9e-13f7-4204-b8b6-a394f40ca83a" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/advertisers/{advertiserId}/ads` (base)
+
+```bash
+curl -s "$API_BASE/v1.0/advertisers/2e63db9e-13f7-4204-b8b6-a394f40ca83a/ads?limit=20" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/advertisers/{advertiserId}/ads` (paginated)
+
+```bash
+curl -s "$API_BASE/v1.0/advertisers/2e63db9e-13f7-4204-b8b6-a394f40ca83a/ads?limit=20&cursor=eyJhZF9pZCI6IjNmMDcifQ==" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/advertisers/{advertiserId}/channels` (latest)
+
+```bash
+curl -s "$API_BASE/v1.0/advertisers/2e63db9e-13f7-4204-b8b6-a394f40ca83a/channels?limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/advertisers/{advertiserId}/channels` (snapshot)
+
+```bash
+curl -s "$API_BASE/v1.0/advertisers/2e63db9e-13f7-4204-b8b6-a394f40ca83a/channels?snapshot_date=2026-02-01&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+## Rankings
+
+### GET `/v1.0/rankings/countries` (base list)
+
+```bash
+curl -s "$API_BASE/v1.0/rankings/countries?country_code=US&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/rankings/countries` (snapshot filter)
+
+```bash
+curl -s "$API_BASE/v1.0/rankings/countries?country_code=US&snapshot_date=2026-02-14&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/rankings/categories` (base list)
+
+```bash
+curl -s "$API_BASE/v1.0/rankings/categories?category_slug=technology&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/rankings/categories` (snapshot filter)
+
+```bash
+curl -s "$API_BASE/v1.0/rankings/categories?category_slug=technology&snapshot_date=2026-02-14&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/rankings/collections` (base)
+
+```bash
+curl -s "$API_BASE/v1.0/rankings/collections?limit=20" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/rankings/collections` (paginated)
+
+```bash
+curl -s "$API_BASE/v1.0/rankings/collections?limit=20&cursor=eyJvZmZzZXQiOjIwfQ==" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/rankings/collections/{collectionId}/channels` (base)
+
+```bash
+curl -s "$API_BASE/v1.0/rankings/collections/8fa793e5-c3b9-4140-a498-08d842d2862f/channels?limit=20" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/rankings/collections/{collectionId}/channels` (paginated)
+
+```bash
+curl -s "$API_BASE/v1.0/rankings/collections/8fa793e5-c3b9-4140-a498-08d842d2862f/channels?limit=20&cursor=eyJyYW5rIjoyMH0=" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+## Mini Apps
+
+### GET `/v1.0/mini-apps/summary`
+
+```bash
+curl -s "$API_BASE/v1.0/mini-apps/summary?period=7d" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/mini-apps` (base list)
+
+```bash
+curl -s "$API_BASE/v1.0/mini-apps?sort_by=daily_users&sort_order=desc&limit=20" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/mini-apps` (search + filters)
+
+```bash
+curl -s "$API_BASE/v1.0/mini-apps?q=wallet&category_slug=finance&min_daily_users=100000&min_rating=4.5&launch_within_days=180&min_growth=10&sort_by=growth&sort_order=desc&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/mini-apps/{miniAppId}`
+
+```bash
+curl -s "$API_BASE/v1.0/mini-apps/fbd37667-230f-4c5b-b0f6-243b02608e11" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+## Event Tracking (Polling)
+
+### GET `/v1.0/accounts/{accountId}/trackers` (base)
+
+```bash
+curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/trackers" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+### GET `/v1.0/accounts/{accountId}/trackers` (filtered)
+
+```bash
+curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/trackers?status=active&type=keyword" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+### POST `/v1.0/accounts/{accountId}/trackers` success
+
+```bash
+curl -s -X POST "$API_BASE/v1.0/accounts/$ACCOUNT_ID/trackers" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tracker_type":"keyword",
+    "tracker_value":"bitcoin price",
+    "notify_push":true,
+    "notify_telegram":true,
+    "notify_email":false
+  }'
+```
+
+### POST `/v1.0/accounts/{accountId}/trackers` error (duplicate)
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Tracker already exists for this account.",
+    "details": []
+  }
+}
+```
+
+### PATCH `/v1.0/accounts/{accountId}/trackers/{trackerId}` success
+
+```bash
+curl -s -X PATCH "$API_BASE/v1.0/accounts/$ACCOUNT_ID/trackers/4bbfc859-7f39-4cb8-bd5b-f79063e67f88" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"paused","notify_push":false}'
+```
+
+### PATCH `/v1.0/accounts/{accountId}/trackers/{trackerId}` error (forbidden)
+
+```json
+{
+  "error": {
+    "code": "forbidden",
+    "message": "Insufficient permissions to update tracker.",
+    "details": []
+  }
+}
+```
+
+### DELETE `/v1.0/accounts/{accountId}/trackers/{trackerId}` success
+
+```bash
+curl -s -X DELETE "$API_BASE/v1.0/accounts/$ACCOUNT_ID/trackers/4bbfc859-7f39-4cb8-bd5b-f79063e67f88" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID" \
+  -i
+```
+
+### DELETE `/v1.0/accounts/{accountId}/trackers/{trackerId}` error (not found)
+
+```json
+{
+  "error": {
+    "code": "not_found",
+    "message": "Tracker not found.",
+    "details": []
+  }
+}
+```
+
+### GET `/v1.0/accounts/{accountId}/tracker-mentions` (base polling)
+
+```bash
+curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/tracker-mentions?limit=50" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+### GET `/v1.0/accounts/{accountId}/tracker-mentions` (cursor + filters)
+
+```bash
+curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/tracker-mentions?tracker_id=4bbfc859-7f39-4cb8-bd5b-f79063e67f88&since=2026-02-14T00:00:00Z&until=2026-02-14T23:59:59Z&limit=50&cursor=eyJtZW50aW9uX3NlcSI6MTAwMDAwfQ==" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+---
+
+## Account
+
+### GET `/v1.0/me`
+
+```bash
+curl -s "$API_BASE/v1.0/me" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### PATCH `/v1.0/me` success
+
+```bash
+curl -s -X PATCH "$API_BASE/v1.0/me" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"first_name":"John","last_name":"Doe","telegram_username":"@johndoe"}'
+```
+
+### PATCH `/v1.0/me` validation error
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "telegram_username must start with @",
+    "details": []
+  }
+}
+```
+
+### POST `/v1.0/me/password` success
+
+```bash
+curl -s -X POST "$API_BASE/v1.0/me/password" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"current_password":"old-password","new_password":"new-strong-password-123"}' \
+  -i
+```
+
+### POST `/v1.0/me/password` validation error
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "new_password must be at least 8 characters",
+    "details": []
+  }
+}
+```
+
+### GET `/v1.0/me/preferences`
+
+```bash
+curl -s "$API_BASE/v1.0/me/preferences" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### PATCH `/v1.0/me/preferences` success
+
+```bash
+curl -s -X PATCH "$API_BASE/v1.0/me/preferences" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"language_code":"en","timezone":"America/New_York","theme":"dark"}'
+```
+
+### PATCH `/v1.0/me/preferences` validation error
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "theme must be one of light,dark,system",
+    "details": []
+  }
+}
+```
+
+### GET `/v1.0/me/notifications`
+
+```bash
+curl -s "$API_BASE/v1.0/me/notifications" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### PATCH `/v1.0/me/notifications` success
+
+```bash
+curl -s -X PATCH "$API_BASE/v1.0/me/notifications" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"email_notifications":true,"telegram_bot_alerts":true,"weekly_reports":false,"marketing_updates":false,"push_notifications":true}'
+```
+
+### PATCH `/v1.0/me/notifications` validation error
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Invalid notification payload",
+    "details": []
+  }
+}
+```
+
+---
+
+## Team
+
+### GET `/v1.0/accounts/{accountId}/members` (base)
+
+```bash
+curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/members" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+### GET `/v1.0/accounts/{accountId}/members` (client-side filtered by role)
+
+```bash
+curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/members" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+### POST `/v1.0/accounts/{accountId}/members/invitations` success
+
+```bash
+curl -s -X POST "$API_BASE/v1.0/accounts/$ACCOUNT_ID/members/invitations" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email":"analyst@example.com",
+    "role":"editor",
+    "channel_access":["9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2"]
+  }'
+```
+
+### POST `/v1.0/accounts/{accountId}/members/invitations` error (already member)
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "User is already a account member.",
+    "details": []
+  }
+}
+```
+
+### PATCH `/v1.0/accounts/{accountId}/members/{memberId}` success
+
+```bash
+curl -s -X PATCH "$API_BASE/v1.0/accounts/$ACCOUNT_ID/members/8deefe66-b5b8-4b53-8f14-f04ab8f2f146" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{"role":"admin","status":"active"}'
+```
+
+### PATCH `/v1.0/accounts/{accountId}/members/{memberId}` error (forbidden)
+
+```json
+{
+  "error": {
+    "code": "forbidden",
+    "message": "Only owner/admin can update members.",
+    "details": []
+  }
+}
+```
+
+### DELETE `/v1.0/accounts/{accountId}/members/{memberId}` success
+
+```bash
+curl -s -X DELETE "$API_BASE/v1.0/accounts/$ACCOUNT_ID/members/8deefe66-b5b8-4b53-8f14-f04ab8f2f146" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID" \
+  -i
+```
+
+### DELETE `/v1.0/accounts/{accountId}/members/{memberId}` error (owner removal blocked)
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Account owner cannot be removed.",
+    "details": []
+  }
+}
+```
+
+### PUT `/v1.0/accounts/{accountId}/members/{memberId}/channel-access` success
+
+```bash
+curl -s -X PUT "$API_BASE/v1.0/accounts/$ACCOUNT_ID/members/8deefe66-b5b8-4b53-8f14-f04ab8f2f146/channel-access" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channels":[
+      {"channel_id":"9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2","access_level":"editor"},
+      {"channel_id":"d5e220e1-74f7-4b20-84a6-67100c53ca76","access_level":"viewer"}
+    ]
+  }'
+```
+
+### PUT `/v1.0/accounts/{accountId}/members/{memberId}/channel-access` error (invalid level)
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "access_level must be one of viewer,editor,admin",
+    "details": []
+  }
+}
+```
+
+---
+
+## API Keys
+
+### GET `/v1.0/accounts/{accountId}/api-keys` (base)
+
+```bash
+curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/api-keys" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+### GET `/v1.0/accounts/{accountId}/api-keys` (client-side active only)
+
+```bash
+curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/api-keys" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+### POST `/v1.0/accounts/{accountId}/api-keys` success
+
+```bash
+curl -s -X POST "$API_BASE/v1.0/accounts/$ACCOUNT_ID/api-keys" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"Production API",
+    "scopes":["read:channels","read:ads","export"],
+    "rate_limit_per_hour":1000
+  }'
+```
+
+```json
+{
+  "data": {
+    "api_key": {
+      "api_key_id": "b1f55d1e-53d7-4c4f-ba37-81f2c9c3e853",
+      "name": "Production API",
+      "key_prefix": "tlm_prod_",
+      "scopes": ["read:channels", "read:ads", "export"],
+      "rate_limit_per_hour": 1000,
+      "created_at": "2026-02-14T12:34:00Z",
+      "last_used_at": null,
+      "revoked_at": null
+    },
+    "secret": "tlm_prod_9f08f3e2..."
+  },
+  "meta": { "secret_returned_once": true }
+}
+```
+
+### POST `/v1.0/accounts/{accountId}/api-keys` error (duplicate name)
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "API key name already exists in account.",
+    "details": []
+  }
+}
+```
+
+### POST `/v1.0/accounts/{accountId}/api-keys/{apiKeyId}/rotate` success
+
+```bash
+curl -s -X POST "$API_BASE/v1.0/accounts/$ACCOUNT_ID/api-keys/b1f55d1e-53d7-4c4f-ba37-81f2c9c3e853/rotate" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+### POST `/v1.0/accounts/{accountId}/api-keys/{apiKeyId}/rotate` error (not found)
+
+```json
+{
+  "error": {
+    "code": "not_found",
+    "message": "API key not found.",
+    "details": []
+  }
+}
+```
+
+### DELETE `/v1.0/accounts/{accountId}/api-keys/{apiKeyId}` success
+
+```bash
+curl -s -X DELETE "$API_BASE/v1.0/accounts/$ACCOUNT_ID/api-keys/b1f55d1e-53d7-4c4f-ba37-81f2c9c3e853" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID" \
+  -i
+```
+
+### DELETE `/v1.0/accounts/{accountId}/api-keys/{apiKeyId}` error (forbidden)
+
+```json
+{
+  "error": {
+    "code": "forbidden",
+    "message": "Only owner/admin can revoke API keys.",
+    "details": []
+  }
+}
+```
+
+### GET `/v1.0/accounts/{accountId}/api-usage`
+
+```bash
+curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/api-usage?from=2026-02-01&to=2026-02-14" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+---
+
+## Billing
+
+### GET `/v1.0/accounts/{accountId}/subscription`
+
+```bash
+curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/subscription" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+### PATCH `/v1.0/accounts/{accountId}/subscription` success
+
+```bash
+curl -s -X PATCH "$API_BASE/v1.0/accounts/$ACCOUNT_ID/subscription" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{"plan_code":"pro","cancel_at_period_end":false}'
+```
+
+### PATCH `/v1.0/accounts/{accountId}/subscription` error (invalid plan)
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Unknown plan_code",
+    "details": []
+  }
+}
+```
+
+### GET `/v1.0/accounts/{accountId}/usage`
+
+```bash
+curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/usage?from=2026-02-01&to=2026-02-14" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+### GET `/v1.0/accounts/{accountId}/payment-methods` (base)
+
+```bash
+curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/payment-methods" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+### GET `/v1.0/accounts/{accountId}/payment-methods` (client-side default first)
+
+```bash
+curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/payment-methods" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+### POST `/v1.0/accounts/{accountId}/payment-methods` success
+
+```bash
+curl -s -X POST "$API_BASE/v1.0/accounts/$ACCOUNT_ID/payment-methods" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{"provider_payment_method_token":"pm_tok_123","make_default":true}'
+```
+
+### POST `/v1.0/accounts/{accountId}/payment-methods` error (token rejected)
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Payment provider token invalid.",
+    "details": []
+  }
+}
+```
+
+### GET `/v1.0/accounts/{accountId}/invoices` (base)
+
+```bash
+curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/invoices?limit=20" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+### GET `/v1.0/accounts/{accountId}/invoices` (paginated)
+
+```bash
+curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/invoices?limit=20&cursor=eyJpbnZvaWNlX2lkIjoiYWJjIn0=" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+### GET `/v1.0/accounts/{accountId}/invoices/{invoiceId}/download-url`
+
+```bash
+curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/invoices/9a027168-5e87-42da-80d3-3305ca86d95a/download-url" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+---
+
+## Exports
+
+### POST `/v1.0/exports` success
+
+```bash
+curl -s -X POST "$API_BASE/v1.0/exports" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "export_type":"channels_csv",
+    "filters":{
+      "q":"crypto",
+      "country_code":"US",
+      "category_slug":"cryptocurrencies"
+    }
+  }'
+```
+
+```json
+{
+  "data": {
+    "export_id": "b0c083e9-a44e-435f-adf4-30bb7dd89d76",
+    "account_id": "11111111-1111-1111-1111-111111111111",
+    "export_type": "channels_csv",
+    "status": "queued",
+    "created_at": "2026-02-14T13:00:00Z",
+    "started_at": null,
+    "completed_at": null,
+    "file_size_bytes": null
+  },
+  "meta": {}
+}
+```
+
+### POST `/v1.0/exports` error (unsupported export_type)
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "export_type must be one of supported values",
+    "details": []
+  }
+}
+```
+
+### GET `/v1.0/exports/{exportId}`
+
+```bash
+curl -s "$API_BASE/v1.0/exports/b0c083e9-a44e-435f-adf4-30bb7dd89d76" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+### GET `/v1.0/exports/{exportId}/download`
+
+```bash
+curl -s "$API_BASE/v1.0/exports/b0c083e9-a44e-435f-adf4-30bb7dd89d76/download" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+---
+
+## Common Authorization Error Example
+
+Used by all protected endpoints:
+
+```json
+{
+  "error": {
+    "code": "unauthorized",
+    "message": "Missing or invalid bearer token.",
+    "details": []
+  }
+}
+```
+
+## Notes for UU Integration
+
+1. Always send `Authorization: Bearer <custom auth JWT>`.
+2. For account-scoped endpoints, always send `X-Account-Id` and keep it equal to path `accountId`.
+3. Use cursor pagination for feeds and large lists.
+4. Event tracking uses polling (`/tracker-mentions`) and not websocket streaming in v1.
