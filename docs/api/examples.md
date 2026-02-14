@@ -648,11 +648,91 @@ curl -s "$API_BASE/v1.0/rankings/countries?country_code=US&limit=10" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
+```json
+{
+  "data": [
+    {
+      "rank": 1,
+      "channel_id": "9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2",
+      "name": "Tech News Daily",
+      "username": "@technewsdaily",
+      "subscribers": 2100000,
+      "growth_7d": 8.2,
+      "engagement_rate": 4.8,
+      "context_type": "country",
+      "context_label": "United States",
+      "trend_label": "growth_7d",
+      "trend_value": 8.2
+    },
+    {
+      "rank": 2,
+      "channel_id": "f8e98743-1448-4d13-8f8f-b8fbbf272141",
+      "name": "Crypto Insights",
+      "username": "@cryptoinsights",
+      "subscribers": 1800000,
+      "growth_7d": 12.4,
+      "engagement_rate": 6.2,
+      "context_type": "country",
+      "context_label": "United States",
+      "trend_label": "growth_7d",
+      "trend_value": 12.4
+    }
+  ],
+  "meta": {
+    "country_code": "US",
+    "country_name": "United States",
+    "snapshot_date": "2026-02-14",
+    "total_ranked_channels": 83,
+    "applied_limit": 10
+  }
+}
+```
+
 ### GET `/v1.0/rankings/categories` (base list)
 
 ```bash
 curl -s "$API_BASE/v1.0/rankings/categories?category_slug=technology&limit=10" \
   -H "Authorization: Bearer $TOKEN"
+```
+
+```json
+{
+  "data": [
+    {
+      "rank": 1,
+      "channel_id": "9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2",
+      "name": "Tech News Daily",
+      "username": "@technewsdaily",
+      "subscribers": 2100000,
+      "growth_7d": 8.2,
+      "engagement_rate": 4.8,
+      "context_type": "category",
+      "context_label": "Technology",
+      "trend_label": "engagement_rate",
+      "trend_value": 4.8
+    },
+    {
+      "rank": 2,
+      "channel_id": "0b4f1ef1-30e3-47f0-89f1-5cf25114ba3b",
+      "name": "AI Weekly",
+      "username": "@aiweekly",
+      "subscribers": 1400000,
+      "growth_7d": 6.1,
+      "engagement_rate": 5.2,
+      "context_type": "category",
+      "context_label": "Technology",
+      "trend_label": "engagement_rate",
+      "trend_value": 5.2
+    }
+  ],
+  "meta": {
+    "category_slug": "technology",
+    "category_name": "Technology",
+    "snapshot_date": "2026-02-14",
+    "total_ranked_channels": 41,
+    "applied_limit": 10
+  }
+}
 ```
 
 ### GET `/v1.0/rankings/collections` (base)
@@ -662,18 +742,35 @@ curl -s "$API_BASE/v1.0/rankings/collections?limit=20" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### GET `/v1.0/rankings/collections/{collectionId}/channels` (base)
-
-```bash
-curl -s "$API_BASE/v1.0/rankings/collections/8fa793e5-c3b9-4140-a498-08d842d2862f/channels?limit=20" \
-  -H "Authorization: Bearer $TOKEN"
-```
-
-### GET `/v1.0/rankings/collections/{collectionId}/channels` (paginated)
-
-```bash
-curl -s "$API_BASE/v1.0/rankings/collections/8fa793e5-c3b9-4140-a498-08d842d2862f/channels?limit=20&cursor=eyJyYW5rIjoyMH0=" \
-  -H "Authorization: Bearer $TOKEN"
+```json
+{
+  "data": [
+    {
+      "collection_id": "8fa793e5-c3b9-4140-a498-08d842d2862f",
+      "slug": "crypto-blockchain",
+      "name": "Crypto & Blockchain",
+      "description": "Top channels in crypto markets and blockchain ecosystems.",
+      "icon": "💎",
+      "channels_count": 2450,
+      "cta_label": "Explore",
+      "cta_target": "/rankings/collections/8fa793e5-c3b9-4140-a498-08d842d2862f/channels"
+    },
+    {
+      "collection_id": "5ae0cf2c-ef1d-4928-a8d7-a3f5ac04af1f",
+      "slug": "tech-startups",
+      "name": "Tech & Startups",
+      "description": "Fast-growing channels for technology and startup founders.",
+      "icon": "🚀",
+      "channels_count": 1890,
+      "cta_label": "Explore",
+      "cta_target": "/rankings/collections/5ae0cf2c-ef1d-4928-a8d7-a3f5ac04af1f/channels"
+    }
+  ],
+  "meta": {
+    "total_active_collections": 6,
+    "applied_limit": 20
+  }
+}
 ```
 
 ---
