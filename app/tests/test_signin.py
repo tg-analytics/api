@@ -6,8 +6,10 @@ from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID
 
-from app.api.routes.signin import confirm_magic_link, create_magic_link
-from app.schemas.magic_link import MagicLinkConfirm, MagicLinkRequest
+from fastapi import HTTPException
+
+from app.api.routes.signin import confirm_magic_link, create_magic_link, google_signin
+from app.schemas.magic_link import GoogleSigninRequest, MagicLinkConfirm, MagicLinkRequest
 
 
 class FakeResponse:
@@ -80,8 +82,15 @@ class FakeTableQuery:
             new_rows = (
                 self.update_data if isinstance(self.update_data, list) else [self.update_data]
             )
-            self.storage.setdefault(self.table_name, []).extend(new_rows)
-            return FakeResponse(new_rows)
+            prepared_rows = []
+            current_rows = self.storage.setdefault(self.table_name, [])
+            for index, row in enumerate(new_rows):
+                prepared = row.copy()
+                if "id" not in prepared:
+                    prepared["id"] = f"{self.table_name}-{len(current_rows) + index + 1}"
+                prepared_rows.append(prepared)
+            current_rows.extend(prepared_rows)
+            return FakeResponse(prepared_rows)
 
         if self.action == "delete":
             remaining = []
@@ -297,3 +306,141 @@ class ConfirmMagicLinkTests(IsolatedAsyncioTestCase):
 
         delete_magic_token.assert_awaited_once_with(client, "tkn")
         send_invite_email.assert_awaited_once()
+
+
+class GoogleSigninTests(IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.settings = SimpleNamespace(
+            app_name="fastapi-starter-kit",
+            access_token_expire_minutes=30,
+            jwt_secret="secret",
+            algorithm="HS256",
+            google_client_id="google-client-id",
+            google_client_secret="google-client-secret",
+        )
+        self.google_payload = {
+            "iss": "https://accounts.google.com",
+            "aud": "google-client-id",
+            "sub": "google-sub-1",
+            "email": "new.user@example.com",
+            "email_verified": "true",
+            "given_name": "New",
+            "family_name": "User",
+            "name": "New User",
+        }
+
+    async def test_google_signin_bootstraps_new_user(self):
+        storage = {
+            "users": [],
+            "accounts": [],
+            "team_members": [],
+            "oauth_identities": [],
+        }
+        client = FakeSupabaseClient(storage)
+
+        with patch(
+            "app.api.routes.signin._verify_google_id_token",
+            AsyncMock(return_value=self.google_payload),
+        ), patch("app.api.routes.signin.get_settings", return_value=self.settings), patch(
+            "app.api.routes.signin.create_access_token", return_value="google-jwt"
+        ):
+            response = await google_signin(GoogleSigninRequest(id_token="id-token"), client=client)
+
+        self.assertEqual("google-jwt", response["access_token"])
+        self.assertEqual("bearer", response["token_type"])
+        self.assertIsNotNone(response["expires_at"])
+        self.assertIsNotNone(response["account_id"])
+        self.assertEqual("new.user@example.com", response["user"]["email"])
+        self.assertEqual("USER", response["user"]["role"])
+        self.assertEqual("ACTIVE", response["user"]["status"])
+        self.assertFalse(response["user"]["is_guest"])
+
+        self.assertEqual(1, len(storage["users"]))
+        self.assertEqual(1, len(storage["accounts"]))
+        self.assertEqual(1, len(storage["team_members"]))
+        self.assertEqual(1, len(storage["oauth_identities"]))
+        self.assertEqual("google", storage["oauth_identities"][0]["provider"])
+        self.assertEqual("google-sub-1", storage["oauth_identities"][0]["provider_user_id"])
+
+    async def test_google_signin_respects_requested_account(self):
+        account_id = "11111111-1111-1111-1111-111111111111"
+        user_id = "af2a103b-1e52-457a-af33-c5b2f9c4e2e3"
+        storage = {
+            "users": [
+                {
+                    "id": user_id,
+                    "email": "existing@example.com",
+                    "first_name": "Existing",
+                    "role": "user",
+                    "status": "active",
+                    "is_guest": False,
+                }
+            ],
+            "accounts": [{"id": account_id, "name": "Main Account", "created_by": user_id}],
+            "team_members": [
+                {
+                    "id": "tm-1",
+                    "user_id": user_id,
+                    "account_id": account_id,
+                    "role": "admin",
+                    "status": "accepted",
+                    "deleted_at": None,
+                }
+            ],
+            "oauth_identities": [],
+        }
+        client = FakeSupabaseClient(storage)
+
+        google_payload = self.google_payload | {
+            "email": "existing@example.com",
+            "sub": "google-sub-existing",
+            "given_name": "Existing",
+        }
+
+        with patch(
+            "app.api.routes.signin._verify_google_id_token",
+            AsyncMock(return_value=google_payload),
+        ), patch("app.api.routes.signin.get_settings", return_value=self.settings), patch(
+            "app.api.routes.signin.create_access_token", return_value="google-jwt"
+        ):
+            response = await google_signin(
+                GoogleSigninRequest(id_token="id-token", account_id=UUID(account_id)),
+                client=client,
+            )
+
+        self.assertEqual(account_id, response["account_id"])
+        self.assertEqual("existing@example.com", response["user"]["email"])
+        self.assertEqual(1, len(storage["oauth_identities"]))
+        self.assertEqual(user_id, storage["oauth_identities"][0]["user_id"])
+
+    async def test_google_signin_rejects_unknown_requested_account(self):
+        user_id = "af2a103b-1e52-457a-af33-c5b2f9c4e2e3"
+        storage = {
+            "users": [
+                {
+                    "id": user_id,
+                    "email": "existing@example.com",
+                    "first_name": "Existing",
+                }
+            ],
+            "accounts": [],
+            "team_members": [],
+            "oauth_identities": [],
+        }
+        client = FakeSupabaseClient(storage)
+        requested_account = "11111111-1111-1111-1111-111111111111"
+        google_payload = self.google_payload | {"email": "existing@example.com", "sub": "google-sub-2"}
+
+        with patch(
+            "app.api.routes.signin._verify_google_id_token",
+            AsyncMock(return_value=google_payload),
+        ), patch("app.api.routes.signin.get_settings", return_value=self.settings), patch(
+            "app.api.routes.signin.create_access_token", return_value="google-jwt"
+        ):
+            with self.assertRaises(HTTPException) as exc:
+                await google_signin(
+                    GoogleSigninRequest(id_token="id-token", account_id=UUID(requested_account)),
+                    client=client,
+                )
+
+        self.assertEqual(403, exc.exception.status_code)

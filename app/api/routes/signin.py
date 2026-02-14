@@ -1,13 +1,17 @@
-from datetime import datetime, timedelta, timezone
 import logging
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
-from supabase import Client
 from postgrest.exceptions import APIError
+from supabase import Client
 
+from app.core.config import get_settings
+from app.core.security import create_access_token
 from app.crud.magic_token import create_magic_token, get_magic_token_by_token, delete_magic_token
 from app.crud.notification import create_notification, get_user_notification_by_subject
+from app.crud.team_member import get_user_default_account_id
 from app.crud.user import get_user_by_email
 from app.db.base import get_supabase
 from app.services.resend import (
@@ -17,15 +21,66 @@ from app.services.resend import (
     send_magic_link_email,
     send_welcome_email,
 )
-from app.schemas.magic_link import MagicLinkRequest, MagicLinkResponse, MagicLinkConfirm
+from app.schemas.magic_link import GoogleSigninRequest, MagicLinkConfirm, MagicLinkRequest, MagicLinkResponse
 from app.schemas.notification import NotificationType
-from app.core.security import create_access_token
-from app.core.config import get_settings
 
 MAGIC_LINK_EXPIRY_MINUTES = 15
+GOOGLE_TOKEN_INFO_URL = "https://oauth2.googleapis.com/tokeninfo"
+GOOGLE_ISSUERS = {"accounts.google.com", "https://accounts.google.com"}
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1.0", tags=["signin"])
+
+
+async def _verify_google_id_token(
+    *,
+    id_token: str,
+    google_client_id: str,
+) -> dict:
+    params = {
+        "id_token": id_token,
+        "client_id": google_client_id,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as http_client:
+            response = await http_client.get(GOOGLE_TOKEN_INFO_URL, params=params)
+    except httpx.HTTPError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to verify Google token",
+        ) from exc
+
+    if response.status_code != status.HTTP_200_OK:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid Google ID token",
+        )
+
+    token_data = response.json()
+    issuer = token_data.get("iss")
+    audience = token_data.get("aud")
+    token_email = token_data.get("email")
+    provider_user_id = token_data.get("sub")
+    email_verified = str(token_data.get("email_verified", "")).lower() == "true"
+
+    if (
+        audience != google_client_id
+        or issuer not in GOOGLE_ISSUERS
+        or not token_email
+        or not provider_user_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid Google ID token",
+        )
+
+    if not email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Google account email is not verified",
+        )
+
+    return token_data
 
 
 @router.post("/signin", response_model=MagicLinkResponse, status_code=status.HTTP_201_CREATED)
@@ -82,6 +137,196 @@ async def create_magic_link(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while creating magic link"
+        ) from exc
+
+
+@router.post("/signin/google", status_code=status.HTTP_200_OK)
+async def google_signin(
+    payload: GoogleSigninRequest,
+    client: Client = Depends(get_supabase),
+) -> dict:
+    """Sign in with Google ID token and return an API access token."""
+    try:
+        settings = get_settings()
+        if not settings.google_client_id or not settings.google_client_secret:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Google SSO is not configured",
+            )
+
+        token_data = await _verify_google_id_token(
+            id_token=payload.id_token,
+            google_client_id=settings.google_client_id,
+        )
+
+        email = str(token_data.get("email") or "").strip().lower()
+        provider_user_id = str(token_data.get("sub") or "").strip()
+        display_name = str(token_data.get("name") or "").strip()
+        given_name = str(token_data.get("given_name") or "").strip()
+        family_name = str(token_data.get("family_name") or "").strip()
+
+        if not email or not provider_user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid Google ID token",
+            )
+
+        oauth_identity_response = (
+            client.table("oauth_identities")
+            .select("id, user_id")
+            .eq("provider", "google")
+            .eq("provider_user_id", provider_user_id)
+            .limit(1)
+            .execute()
+        )
+
+        user: dict | None = None
+        oauth_identity_id: str | None = None
+
+        if oauth_identity_response.data:
+            identity = oauth_identity_response.data[0]
+            oauth_identity_id = identity.get("id")
+            linked_user_response = (
+                client.table("users")
+                .select("*")
+                .eq("id", identity["user_id"])
+                .limit(1)
+                .execute()
+            )
+            if not linked_user_response.data:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Google identity is not linked to a valid user",
+                )
+            user = linked_user_response.data[0]
+        else:
+            user = await get_user_by_email(client, email)
+
+        if not user:
+            first_name = given_name or display_name.split(" ")[0] or email.split("@")[0]
+            last_name = family_name or (
+                " ".join(display_name.split(" ")[1:]).strip() if " " in display_name else None
+            )
+
+            user_data = {
+                "email": email,
+                "first_name": first_name,
+            }
+            if last_name:
+                user_data["last_name"] = last_name
+
+            user_response = client.table("users").insert(user_data).execute()
+            if not user_response.data:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to create user",
+                )
+            user = user_response.data[0]
+            user_id = user["id"]
+
+            account_data = {
+                "name": f"{first_name}'s Account",
+                "is_default": True,
+                "created_by": user_id,
+                "updated_by": user_id,
+            }
+            account_response = client.table("accounts").insert(account_data).execute()
+            if not account_response.data:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to create account",
+                )
+            account_id = account_response.data[0]["id"]
+
+            team_member_data = {
+                "account_id": account_id,
+                "user_id": user_id,
+                "role": "admin",
+                "status": "accepted",
+                "created_by": user_id,
+            }
+            team_member_response = client.table("team_members").insert(team_member_data).execute()
+            if not team_member_response.data:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to create team member",
+                )
+
+        identity_payload = {
+            "user_id": user["id"],
+            "provider": "google",
+            "provider_user_id": provider_user_id,
+            "provider_email": email,
+            "raw_profile": token_data,
+        }
+        if oauth_identity_id:
+            client.table("oauth_identities").update(identity_payload).eq("id", oauth_identity_id).execute()
+        else:
+            oauth_insert_response = client.table("oauth_identities").insert(identity_payload).execute()
+            if not oauth_insert_response.data:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to link Google identity",
+                )
+
+        requested_account_id = str(payload.account_id) if payload.account_id else None
+        if requested_account_id:
+            membership_response = (
+                client.table("team_members")
+                .select("id")
+                .eq("user_id", user["id"])
+                .eq("account_id", requested_account_id)
+                .eq("status", "accepted")
+                .is_("deleted_at", "null")
+                .limit(1)
+                .execute()
+            )
+            if not membership_response.data:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="User is not a member of the requested account",
+                )
+            account_id = requested_account_id
+        else:
+            account_id = await get_user_default_account_id(client, user["id"])
+
+        client.table("users").update({"last_login_at": datetime.now(timezone.utc).isoformat()}).eq(
+            "id", user["id"]
+        ).execute()
+
+        access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+        expires_at = datetime.now(timezone.utc) + access_token_expires
+        access_token = create_access_token(
+            data={"sub": user["email"], "user_id": user["id"]},
+            expires_delta=access_token_expires,
+        )
+
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "expires_at": expires_at,
+            "account_id": account_id,
+            "user": {
+                "id": user["id"],
+                "email": user["email"],
+                "name": user.get("first_name") or display_name or email.split("@")[0],
+                "role": str(user.get("role") or "user").upper(),
+                "status": str(user.get("status") or "active").upper(),
+                "is_guest": bool(user.get("is_guest", False)),
+            },
+        }
+
+    except HTTPException:
+        raise
+    except APIError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error: {exc.message if hasattr(exc, 'message') else str(exc)}",
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred during Google authentication",
         ) from exc
 
 
