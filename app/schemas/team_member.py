@@ -28,6 +28,7 @@ class TeamMemberResponse(BaseModel):
     role: str
     user_id: str
     status: str
+    email: EmailStr | None = None
     name: str | None
     first_name: str | None = None
     last_name: str | None = None

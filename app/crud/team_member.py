@@ -89,7 +89,7 @@ async def get_team_members_by_account(
     query = (
         client.table("team_members")
         .select(
-            "id, role, status, user_id, created_at, users!team_members_user_id_fkey(first_name, last_name)"
+            "id, role, status, user_id, created_at, users!team_members_user_id_fkey(first_name, last_name, email)"
         )
         .eq("account_id", account_id)
         .is_("deleted_at", "null")
@@ -115,11 +115,13 @@ async def get_team_members_by_account(
     members = []
     for member in response.data[:limit]:
         user_name = None
+        user_email = None
         if member.get("users") and isinstance(member["users"], dict):
             # Combine first and last name if available
             first_name = member["users"].get("first_name") or ""
             last_name = member["users"].get("last_name") or ""
             user_name = f"{first_name} {last_name}".strip() or None
+            user_email = member["users"].get("email")
 
         members.append(
             {
@@ -127,6 +129,7 @@ async def get_team_members_by_account(
                 "role": member["role"],
                 "status": member["status"],
                 "user_id": member["user_id"],
+                "email": user_email,
                 "name": user_name,
                 "joined_at": member["created_at"],
             }
@@ -205,7 +208,7 @@ async def get_team_member_details(
     """Get a team member with user details by ID."""
     response = (
         client.table("team_members")
-        .select("id, role, status, user_id, account_id, created_at, users!team_members_user_id_fkey(first_name, last_name)")
+        .select("id, role, status, user_id, account_id, created_at, users!team_members_user_id_fkey(first_name, last_name, email)")
         .eq("id", member_id)
         .is_("deleted_at", "null")
         .execute()
@@ -218,11 +221,13 @@ async def get_team_member_details(
     first_name = None
     last_name = None
     user_name = None
+    email = None
     if member.get("users") and isinstance(member["users"], dict):
         first_name = member["users"].get("first_name") or None
         last_name = member["users"].get("last_name") or None
         if first_name:
             user_name = first_name
+        email = member["users"].get("email")
 
     return {
         "id": member["id"],
@@ -230,6 +235,7 @@ async def get_team_member_details(
         "status": member["status"],
         "user_id": member["user_id"],
         "account_id": member["account_id"],
+        "email": email,
         "first_name": first_name,
         "last_name": last_name,
         "name": user_name,

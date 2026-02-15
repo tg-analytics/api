@@ -1400,6 +1400,7 @@ curl -s "$API_BASE/v1.0/team_members?limit=20" \
       "role": "admin",
       "user_id": "f8472f26-9b16-4ff7-a533-b365f9f7ecf3",
       "status": "accepted",
+      "email": "alex.carter@example.com",
       "name": "Alex Carter",
       "first_name": "Alex",
       "last_name": "Carter",
