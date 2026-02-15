@@ -8,6 +8,7 @@ from app.crud.tracker import (
     create_tracker,
     delete_tracker,
     ensure_account_access,
+    get_tracker,
     list_tracker_mentions,
     list_trackers,
     update_tracker,
@@ -56,6 +57,32 @@ async def get_trackers(
         tracker_type=tracker_type,
     )
     return TrackerListEnvelope(data=[Tracker(**row) for row in items], meta={})
+
+
+@router.get("/trackers/{tracker_id}", response_model=TrackerEnvelope)
+async def get_tracker_by_id(
+    account_id: str,
+    tracker_id: str,
+    x_account_id: str = Header(..., alias="X-Account-Id"),
+    current_user: dict = Depends(deps.get_current_user),
+    client: Client = Depends(get_supabase),
+) -> TrackerEnvelope:
+    try:
+        await ensure_account_access(
+            client,
+            account_id=account_id,
+            header_account_id=x_account_id,
+            user_id=current_user["id"],
+            require_write=False,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+
+    tracker = await get_tracker(client, account_id=account_id, tracker_id=tracker_id)
+    if tracker is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tracker not found.")
+
+    return TrackerEnvelope(data=Tracker(**tracker), meta={})
 
 
 @router.post("/trackers", response_model=TrackerEnvelope, status_code=status.HTTP_201_CREATED)

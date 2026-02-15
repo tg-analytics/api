@@ -352,6 +352,38 @@ def test_get_trackers_filter_by_status_and_type():
         app.dependency_overrides = {}
 
 
+def test_get_tracker_by_id_success():
+    _setup("user-editor")
+    try:
+        with TestClient(app) as client:
+            response = client.get(
+                "/v1.0/accounts/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/trackers/11111111-1111-1111-1111-111111111111",
+                headers=_headers(),
+            )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["data"]["tracker_id"] == "11111111-1111-1111-1111-111111111111"
+        assert body["data"]["tracker_type"] == "keyword"
+    finally:
+        app.dependency_overrides = {}
+
+
+def test_get_tracker_by_id_not_found_returns_404():
+    _setup("user-editor")
+    try:
+        with TestClient(app) as client:
+            response = client.get(
+                "/v1.0/accounts/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/trackers/99999999-9999-9999-9999-999999999999",
+                headers=_headers(),
+            )
+
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Tracker not found."
+    finally:
+        app.dependency_overrides = {}
+
+
 def test_post_tracker_success_created_201():
     storage = _setup("user-editor")
     try:

@@ -874,6 +874,24 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
 
   /v1.0/accounts/{accountId}/trackers/{trackerId}:
+    get:
+      tags: [Trackers]
+      operationId: getTracker
+      summary: Get tracker by id.
+      parameters:
+        - $ref: '#/components/parameters/AccountPath'
+        - $ref: '#/components/parameters/AccountHeader'
+        - $ref: '#/components/parameters/TrackerIdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TrackerEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
     patch:
       tags: [Trackers]
       operationId: updateTracker

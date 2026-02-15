@@ -117,6 +117,27 @@ async def list_trackers(
     return [_normalize_tracker_row(row) for row in (response.data or [])]
 
 
+async def get_tracker(
+    client: Client,
+    *,
+    account_id: str,
+    tracker_id: str,
+) -> dict[str, Any] | None:
+    response = (
+        client.table("trackers")
+        .select("*")
+        .eq("account_id", account_id)
+        .eq("id", tracker_id)
+        .is_("deleted_at", "null")
+        .limit(1)
+        .execute()
+    )
+    if not response.data:
+        return None
+
+    return _normalize_tracker_row(response.data[0])
+
+
 async def create_tracker(
     client: Client,
     *,

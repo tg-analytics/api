@@ -1024,6 +1024,40 @@ curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/trackers?status=active&type=keyword
 }
 ```
 
+### GET `/v1.0/accounts/{accountId}/trackers/{trackerId}` success
+
+```bash
+curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/trackers/4bbfc859-7f39-4cb8-bd5b-f79063e67f88" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+```json
+{
+  "data": {
+    "tracker_id": "4bbfc859-7f39-4cb8-bd5b-f79063e67f88",
+    "account_id": "11111111-1111-1111-1111-111111111111",
+    "tracker_type": "keyword",
+    "tracker_value": "bitcoin price",
+    "status": "active",
+    "mentions_count": 12,
+    "last_activity_at": "2026-02-14T20:11:00Z",
+    "notify_push": true,
+    "notify_telegram": true,
+    "notify_email": false
+  },
+  "meta": {}
+}
+```
+
+### GET `/v1.0/accounts/{accountId}/trackers/{trackerId}` error (not found)
+
+```json
+{
+  "detail": "Tracker not found."
+}
+```
+
 ### POST `/v1.0/accounts/{accountId}/trackers` success
 
 ```bash
