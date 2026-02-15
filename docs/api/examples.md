@@ -887,12 +887,64 @@ curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/trackers" \
   -H "X-Account-Id: $ACCOUNT_ID"
 ```
 
+```json
+{
+  "data": [
+    {
+      "tracker_id": "4bbfc859-7f39-4cb8-bd5b-f79063e67f88",
+      "account_id": "11111111-1111-1111-1111-111111111111",
+      "tracker_type": "keyword",
+      "tracker_value": "bitcoin price",
+      "status": "active",
+      "mentions_count": 12,
+      "last_activity_at": "2026-02-14T20:11:00Z",
+      "notify_push": true,
+      "notify_telegram": true,
+      "notify_email": false
+    },
+    {
+      "tracker_id": "2c4c828f-dad0-4c2e-8deb-154a8b407173",
+      "account_id": "11111111-1111-1111-1111-111111111111",
+      "tracker_type": "channel",
+      "tracker_value": "@technewsdaily",
+      "status": "paused",
+      "mentions_count": 5,
+      "last_activity_at": "2026-02-14T13:20:00Z",
+      "notify_push": true,
+      "notify_telegram": true,
+      "notify_email": true
+    }
+  ],
+  "meta": {}
+}
+```
+
 ### GET `/v1.0/accounts/{accountId}/trackers` (filtered)
 
 ```bash
 curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/trackers?status=active&type=keyword" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+```json
+{
+  "data": [
+    {
+      "tracker_id": "4bbfc859-7f39-4cb8-bd5b-f79063e67f88",
+      "account_id": "11111111-1111-1111-1111-111111111111",
+      "tracker_type": "keyword",
+      "tracker_value": "bitcoin price",
+      "status": "active",
+      "mentions_count": 12,
+      "last_activity_at": "2026-02-14T20:11:00Z",
+      "notify_push": true,
+      "notify_telegram": true,
+      "notify_email": false
+    }
+  ],
+  "meta": {}
+}
 ```
 
 ### POST `/v1.0/accounts/{accountId}/trackers` success
@@ -911,15 +963,29 @@ curl -s -X POST "$API_BASE/v1.0/accounts/$ACCOUNT_ID/trackers" \
   }'
 ```
 
+```json
+{
+  "data": {
+    "tracker_id": "9c3fe4c8-2a8f-4f72-8010-7d4649d2cbda",
+    "account_id": "11111111-1111-1111-1111-111111111111",
+    "tracker_type": "keyword",
+    "tracker_value": "bitcoin price",
+    "status": "active",
+    "mentions_count": 0,
+    "last_activity_at": null,
+    "notify_push": true,
+    "notify_telegram": true,
+    "notify_email": false
+  },
+  "meta": {}
+}
+```
+
 ### POST `/v1.0/accounts/{accountId}/trackers` error (duplicate)
 
 ```json
 {
-  "error": {
-    "code": "validation_error",
-    "message": "Tracker already exists for this account.",
-    "details": []
-  }
+  "detail": "Tracker already exists for this account."
 }
 ```
 
@@ -933,15 +999,29 @@ curl -s -X PATCH "$API_BASE/v1.0/accounts/$ACCOUNT_ID/trackers/4bbfc859-7f39-4cb
   -d '{"status":"paused","notify_push":false}'
 ```
 
+```json
+{
+  "data": {
+    "tracker_id": "4bbfc859-7f39-4cb8-bd5b-f79063e67f88",
+    "account_id": "11111111-1111-1111-1111-111111111111",
+    "tracker_type": "keyword",
+    "tracker_value": "bitcoin price",
+    "status": "paused",
+    "mentions_count": 12,
+    "last_activity_at": "2026-02-14T20:11:00Z",
+    "notify_push": false,
+    "notify_telegram": true,
+    "notify_email": false
+  },
+  "meta": {}
+}
+```
+
 ### PATCH `/v1.0/accounts/{accountId}/trackers/{trackerId}` error (forbidden)
 
 ```json
 {
-  "error": {
-    "code": "forbidden",
-    "message": "Insufficient permissions to update tracker.",
-    "details": []
-  }
+  "detail": "Insufficient permissions to update tracker."
 }
 ```
 
@@ -954,15 +1034,15 @@ curl -s -X DELETE "$API_BASE/v1.0/accounts/$ACCOUNT_ID/trackers/4bbfc859-7f39-4c
   -i
 ```
 
+```http
+HTTP/1.1 204 No Content
+```
+
 ### DELETE `/v1.0/accounts/{accountId}/trackers/{trackerId}` error (not found)
 
 ```json
 {
-  "error": {
-    "code": "not_found",
-    "message": "Tracker not found.",
-    "details": []
-  }
+  "detail": "Tracker not found."
 }
 ```
 
@@ -974,12 +1054,69 @@ curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/tracker-mentions?limit=50" \
   -H "X-Account-Id: $ACCOUNT_ID"
 ```
 
+```json
+{
+  "data": [
+    {
+      "mention_id": "5a5a872f-37d9-475b-939f-e8664b2ec2f5",
+      "tracker_id": "4bbfc859-7f39-4cb8-bd5b-f79063e67f88",
+      "mention_seq": 100003,
+      "channel_id": "9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2",
+      "channel_name": "Tech News Daily",
+      "post_id": "7066a9dc-bde6-4c73-bf8b-3847ebf72b03",
+      "mention_text": "bitcoin price",
+      "context_snippet": "Analysts expect more volatility in bitcoin price this week.",
+      "mentioned_at": "2026-02-14T20:00:00Z"
+    },
+    {
+      "mention_id": "fbfb27ce-f65b-43a8-83a6-70fc74de0379",
+      "tracker_id": "4bbfc859-7f39-4cb8-bd5b-f79063e67f88",
+      "mention_seq": 100002,
+      "channel_id": "f8e98743-1448-4d13-8f8f-b8fbbf272141",
+      "channel_name": "Crypto Growth Radar",
+      "post_id": "4a2d7b13-e437-4d15-a5af-c8657e6f6451",
+      "mention_text": "bitcoin price",
+      "context_snippet": "Daily wrap-up on bitcoin price movement.",
+      "mentioned_at": "2026-02-14T19:30:00Z"
+    }
+  ],
+  "page": {
+    "next_cursor": "eyJtZW50aW9uX3NlcSI6MTAwMDAyfQ==",
+    "has_more": true
+  },
+  "meta": {}
+}
+```
+
 ### GET `/v1.0/accounts/{accountId}/tracker-mentions` (cursor + filters)
 
 ```bash
 curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/tracker-mentions?tracker_id=4bbfc859-7f39-4cb8-bd5b-f79063e67f88&since=2026-02-14T00:00:00Z&until=2026-02-14T23:59:59Z&limit=50&cursor=eyJtZW50aW9uX3NlcSI6MTAwMDAwfQ==" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+```json
+{
+  "data": [
+    {
+      "mention_id": "9f960fd2-c5db-4f08-9fab-94916183f9f9",
+      "tracker_id": "4bbfc859-7f39-4cb8-bd5b-f79063e67f88",
+      "mention_seq": 99999,
+      "channel_id": null,
+      "channel_name": null,
+      "post_id": null,
+      "mention_text": "bitcoin price",
+      "context_snippet": null,
+      "mentioned_at": "2026-02-14T10:15:00Z"
+    }
+  ],
+  "page": {
+    "next_cursor": null,
+    "has_more": false
+  },
+  "meta": {}
+}
 ```
 
 ---
