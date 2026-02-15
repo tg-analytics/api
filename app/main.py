@@ -2,7 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import (
+    account_channels,
+    api_keys,
     auth,
+    billing,
     channels,
     mini_apps,
     notifications,
@@ -47,6 +50,9 @@ app.include_router(channels.router)
 app.include_router(mini_apps.router)
 app.include_router(rankings.router)
 app.include_router(trackers.router)
+app.include_router(account_channels.router)
+app.include_router(api_keys.router)
+app.include_router(billing.router)
 
 
 @app.get("/", tags=["public"])

@@ -941,10 +941,10 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
-  /v1.0/me:
+  /v1.0/users/me:
     get:
       tags: [Account]
-      operationId: getMe
+      operationId: getUserMe
       summary: Get current user profile.
       responses:
         '200':
@@ -956,7 +956,7 @@ paths:
 
     patch:
       tags: [Account]
-      operationId: updateMe
+      operationId: updateUserMe
       summary: Update profile fields.
       requestBody:
         required: true
@@ -972,25 +972,10 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
-  /v1.0/me/password:
-    post:
-      tags: [Account]
-      operationId: changePassword
-      summary: Change account password.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/ChangePasswordRequest' }
-      responses:
-        '204': { description: Password changed }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-
-  /v1.0/me/preferences:
+  /v1.0/users/me/preferences:
     get:
       tags: [Account]
-      operationId: getMyPreferences
+      operationId: getUserMyPreferences
       summary: Get user preferences.
       responses:
         '200':
@@ -1002,7 +987,7 @@ paths:
 
     patch:
       tags: [Account]
-      operationId: updateMyPreferences
+      operationId: updateUserMyPreferences
       summary: Update user preferences.
       requestBody:
         required: true
@@ -1018,10 +1003,10 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
-  /v1.0/me/notifications:
+  /v1.0/users/me/notifications:
     get:
       tags: [Account]
-      operationId: getMyNotifications
+      operationId: getUserMyNotifications
       summary: Get notification settings.
       responses:
         '200':
@@ -1033,7 +1018,7 @@ paths:
 
     patch:
       tags: [Account]
-      operationId: updateMyNotifications
+      operationId: updateUserMyNotifications
       summary: Update notification settings.
       requestBody:
         required: true

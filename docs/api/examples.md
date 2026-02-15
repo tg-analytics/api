@@ -458,6 +458,23 @@ curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/channels?limit=20" \
   -H "X-Account-Id: $ACCOUNT_ID"
 ```
 
+```json
+{
+  "data": [
+    {
+      "account_id": "11111111-1111-1111-1111-111111111111",
+      "channel_id": "9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2",
+      "alias_name": "Primary Tech Channel",
+      "monitoring_enabled": true,
+      "is_favorite": true,
+      "added_at": "2026-02-14T12:00:00Z"
+    }
+  ],
+  "page": { "next_cursor": null, "has_more": false },
+  "meta": {}
+}
+```
+
 ### GET `/v1.0/accounts/{accountId}/channels` (paginated)
 
 ```bash
@@ -481,6 +498,20 @@ curl -s -X POST "$API_BASE/v1.0/accounts/$ACCOUNT_ID/channels" \
   }'
 ```
 
+```json
+{
+  "data": {
+    "account_id": "11111111-1111-1111-1111-111111111111",
+    "channel_id": "9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2",
+    "alias_name": "Primary Tech Channel",
+    "monitoring_enabled": true,
+    "is_favorite": true,
+    "added_at": "2026-02-14T12:00:00Z"
+  },
+  "meta": {}
+}
+```
+
 ### POST `/v1.0/accounts/{accountId}/channels` validation error
 
 ```json
@@ -501,6 +532,18 @@ curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/channels/insights" \
   -H "X-Account-Id: $ACCOUNT_ID"
 ```
 
+```json
+{
+  "data": {
+    "total_subscribers": 259000,
+    "total_views": 1200000,
+    "avg_engagement_rate": 4.8,
+    "channels_count": 3
+  },
+  "meta": {}
+}
+```
+
 ### POST `/v1.0/accounts/{accountId}/channels/{channelId}/verification` success
 
 ```bash
@@ -509,6 +552,23 @@ curl -s -X POST "$API_BASE/v1.0/accounts/$ACCOUNT_ID/channels/9f28253d-8ffd-4d2f
   -H "X-Account-Id: $ACCOUNT_ID" \
   -H "Content-Type: application/json" \
   -d '{"verification_method":"description_code"}'
+```
+
+```json
+{
+  "data": {
+    "request_id": "2df0f04b-99cb-4d8f-94a2-cbce3a40ab22",
+    "account_id": "11111111-1111-1111-1111-111111111111",
+    "channel_id": "9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2",
+    "verification_code": "TP-7E2A1F9B",
+    "verification_method": "description_code",
+    "status": "pending",
+    "requested_at": "2026-02-14T13:10:00Z",
+    "confirmed_at": null,
+    "expires_at": "2026-02-21T13:10:00Z"
+  },
+  "meta": {}
+}
 ```
 
 ### POST `/v1.0/accounts/{accountId}/channels/{channelId}/verification` error (pending exists)
@@ -531,6 +591,23 @@ curl -s -X POST "$API_BASE/v1.0/accounts/$ACCOUNT_ID/channels/9f28253d-8ffd-4d2f
   -H "X-Account-Id: $ACCOUNT_ID" \
   -H "Content-Type: application/json" \
   -d '{"evidence":{"description_contains_code":true}}'
+```
+
+```json
+{
+  "data": {
+    "request_id": "2df0f04b-99cb-4d8f-94a2-cbce3a40ab22",
+    "account_id": "11111111-1111-1111-1111-111111111111",
+    "channel_id": "9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2",
+    "verification_code": "TP-7E2A1F9B",
+    "verification_method": "description_code",
+    "status": "confirmed",
+    "requested_at": "2026-02-14T13:10:00Z",
+    "confirmed_at": "2026-02-14T13:20:00Z",
+    "expires_at": "2026-02-21T13:10:00Z"
+  },
+  "meta": {}
+}
 ```
 
 ### POST `/v1.0/accounts/{accountId}/channels/{channelId}/verification/{requestId}/confirm` error (expired)
@@ -1123,23 +1200,32 @@ curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/tracker-mentions?tracker_id=4bbfc85
 
 ## Account
 
-### GET `/v1.0/me`
+### GET `/v1.0/users/me`
 
 ```bash
-curl -s "$API_BASE/v1.0/me" \
+curl -s "$API_BASE/v1.0/users/me" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### PATCH `/v1.0/me` success
+```json
+{
+  "email": "john@example.com",
+  "first_name": "John",
+  "last_name": "Doe",
+  "default_account_id": "11111111-1111-1111-1111-111111111111"
+}
+```
+
+### PATCH `/v1.0/users/me` success
 
 ```bash
-curl -s -X PATCH "$API_BASE/v1.0/me" \
+curl -s -X PATCH "$API_BASE/v1.0/users/me" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"first_name":"John","last_name":"Doe","telegram_username":"@johndoe"}'
 ```
 
-### PATCH `/v1.0/me` validation error
+### PATCH `/v1.0/users/me` validation error
 
 ```json
 {
@@ -1151,45 +1237,34 @@ curl -s -X PATCH "$API_BASE/v1.0/me" \
 }
 ```
 
-### POST `/v1.0/me/password` success
+### GET `/v1.0/users/me/preferences`
 
 ```bash
-curl -s -X POST "$API_BASE/v1.0/me/password" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"current_password":"old-password","new_password":"new-strong-password-123"}' \
-  -i
-```
-
-### POST `/v1.0/me/password` validation error
-
-```json
-{
-  "error": {
-    "code": "validation_error",
-    "message": "new_password must be at least 8 characters",
-    "details": []
-  }
-}
-```
-
-### GET `/v1.0/me/preferences`
-
-```bash
-curl -s "$API_BASE/v1.0/me/preferences" \
+curl -s "$API_BASE/v1.0/users/me/preferences" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### PATCH `/v1.0/me/preferences` success
+```json
+{
+  "data": {
+    "language_code": "en",
+    "timezone": "UTC",
+    "theme": "system"
+  },
+  "meta": {}
+}
+```
+
+### PATCH `/v1.0/users/me/preferences` success
 
 ```bash
-curl -s -X PATCH "$API_BASE/v1.0/me/preferences" \
+curl -s -X PATCH "$API_BASE/v1.0/users/me/preferences" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"language_code":"en","timezone":"America/New_York","theme":"dark"}'
 ```
 
-### PATCH `/v1.0/me/preferences` validation error
+### PATCH `/v1.0/users/me/preferences` validation error
 
 ```json
 {
@@ -1201,23 +1276,36 @@ curl -s -X PATCH "$API_BASE/v1.0/me/preferences" \
 }
 ```
 
-### GET `/v1.0/me/notifications`
+### GET `/v1.0/users/me/notifications`
 
 ```bash
-curl -s "$API_BASE/v1.0/me/notifications" \
+curl -s "$API_BASE/v1.0/users/me/notifications" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### PATCH `/v1.0/me/notifications` success
+```json
+{
+  "data": {
+    "email_notifications": true,
+    "telegram_bot_alerts": true,
+    "weekly_reports": false,
+    "marketing_updates": false,
+    "push_notifications": false
+  },
+  "meta": {}
+}
+```
+
+### PATCH `/v1.0/users/me/notifications` success
 
 ```bash
-curl -s -X PATCH "$API_BASE/v1.0/me/notifications" \
+curl -s -X PATCH "$API_BASE/v1.0/users/me/notifications" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"email_notifications":true,"telegram_bot_alerts":true,"weekly_reports":false,"marketing_updates":false,"push_notifications":true}'
 ```
 
-### PATCH `/v1.0/me/notifications` validation error
+### PATCH `/v1.0/users/me/notifications` validation error
 
 ```json
 {
@@ -1357,6 +1445,24 @@ curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/api-keys" \
   -H "X-Account-Id: $ACCOUNT_ID"
 ```
 
+```json
+{
+  "data": [
+    {
+      "api_key_id": "b1f55d1e-53d7-4c4f-ba37-81f2c9c3e853",
+      "name": "Production API",
+      "key_prefix": "tlm_prod_",
+      "scopes": ["read:channels", "read:ads", "export"],
+      "rate_limit_per_hour": 1000,
+      "created_at": "2026-02-14T12:34:00Z",
+      "last_used_at": "2026-02-14T13:30:00Z",
+      "revoked_at": null
+    }
+  ],
+  "meta": {}
+}
+```
+
 ### GET `/v1.0/accounts/{accountId}/api-keys` (client-side active only)
 
 ```bash
@@ -1418,6 +1524,25 @@ curl -s -X POST "$API_BASE/v1.0/accounts/$ACCOUNT_ID/api-keys/b1f55d1e-53d7-4c4f
   -H "X-Account-Id: $ACCOUNT_ID"
 ```
 
+```json
+{
+  "data": {
+    "api_key": {
+      "api_key_id": "b1f55d1e-53d7-4c4f-ba37-81f2c9c3e853",
+      "name": "Production API",
+      "key_prefix": "tlm_rot_",
+      "scopes": ["read:channels", "read:ads", "export"],
+      "rate_limit_per_hour": 1000,
+      "created_at": "2026-02-14T12:34:00Z",
+      "last_used_at": null,
+      "revoked_at": null
+    },
+    "secret": "tlm_rot_e357..."
+  },
+  "meta": { "secret_returned_once": true }
+}
+```
+
 ### POST `/v1.0/accounts/{accountId}/api-keys/{apiKeyId}/rotate` error (not found)
 
 ```json
@@ -1459,6 +1584,21 @@ curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/api-usage?from=2026-02-01&to=2026-0
   -H "X-Account-Id: $ACCOUNT_ID"
 ```
 
+```json
+{
+  "data": {
+    "total_requests": 18670,
+    "error_rate": 0.1,
+    "avg_latency_ms": 124.0,
+    "by_day": [
+      { "date": "2026-02-13", "requests": 1120, "errors": 1 },
+      { "date": "2026-02-14", "requests": 1430, "errors": 2 }
+    ]
+  },
+  "meta": {}
+}
+```
+
 ---
 
 ## Billing
@@ -1469,6 +1609,22 @@ curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/api-usage?from=2026-02-01&to=2026-0
 curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/subscription" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+```json
+{
+  "data": {
+    "subscription_id": "4e4c5c95-1504-4684-9112-6ab3d85d3e91",
+    "account_id": "11111111-1111-1111-1111-111111111111",
+    "plan_code": "pro",
+    "status": "active",
+    "billing_state": "active",
+    "current_period_start": "2026-02-01T00:00:00Z",
+    "current_period_end": "2026-03-01T00:00:00Z",
+    "cancel_at_period_end": false
+  },
+  "meta": {}
+}
 ```
 
 ### PATCH `/v1.0/accounts/{accountId}/subscription` success
@@ -1501,12 +1657,43 @@ curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/usage?from=2026-02-01&to=2026-02-14
   -H "X-Account-Id: $ACCOUNT_ID"
 ```
 
+```json
+{
+  "data": {
+    "from": "2026-02-01",
+    "to": "2026-02-14",
+    "channel_searches": 2450,
+    "event_trackers_count": 32,
+    "api_requests_count": 8230,
+    "exports_count": 15
+  },
+  "meta": {}
+}
+```
+
 ### GET `/v1.0/accounts/{accountId}/payment-methods` (base)
 
 ```bash
 curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/payment-methods" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+```json
+{
+  "data": [
+    {
+      "payment_method_id": "2a313503-2c4d-4b91-bf0d-584b5fbd5ea5",
+      "brand": "VISA",
+      "last4": "4242",
+      "exp_month": 12,
+      "exp_year": 2027,
+      "is_default": true,
+      "status": "active"
+    }
+  ],
+  "meta": {}
+}
 ```
 
 ### GET `/v1.0/accounts/{accountId}/payment-methods` (client-side default first)
@@ -1525,6 +1712,21 @@ curl -s -X POST "$API_BASE/v1.0/accounts/$ACCOUNT_ID/payment-methods" \
   -H "X-Account-Id: $ACCOUNT_ID" \
   -H "Content-Type: application/json" \
   -d '{"provider_payment_method_token":"pm_tok_123","make_default":true}'
+```
+
+```json
+{
+  "data": {
+    "payment_method_id": "2a313503-2c4d-4b91-bf0d-584b5fbd5ea5",
+    "brand": "VISA",
+    "last4": "1234",
+    "exp_month": 12,
+    "exp_year": 2028,
+    "is_default": true,
+    "status": "active"
+  },
+  "meta": {}
+}
 ```
 
 ### POST `/v1.0/accounts/{accountId}/payment-methods` error (token rejected)
@@ -1547,6 +1749,26 @@ curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/invoices?limit=20" \
   -H "X-Account-Id: $ACCOUNT_ID"
 ```
 
+```json
+{
+  "data": [
+    {
+      "invoice_id": "9a027168-5e87-42da-80d3-3305ca86d95a",
+      "invoice_number": "INV-2026-001",
+      "status": "active",
+      "currency": "USD",
+      "amount_total": 49.0,
+      "period_start": "2026-01-01",
+      "period_end": "2026-01-31",
+      "issued_at": "2026-02-01T00:00:00Z",
+      "paid_at": "2026-02-01T00:03:00Z"
+    }
+  ],
+  "page": { "next_cursor": null, "has_more": false },
+  "meta": {}
+}
+```
+
 ### GET `/v1.0/accounts/{accountId}/invoices` (paginated)
 
 ```bash
@@ -1561,6 +1783,16 @@ curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/invoices?limit=20&cursor=eyJpbnZvaW
 curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/invoices/9a027168-5e87-42da-80d3-3305ca86d95a/download-url" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Account-Id: $ACCOUNT_ID"
+```
+
+```json
+{
+  "data": {
+    "url": "https://cdn.telegrampulse.example.com/invoices/INV-2026-001.pdf?token=abc",
+    "expires_at": "2026-02-14T17:00:00Z"
+  },
+  "meta": {}
+}
 ```
 
 ---

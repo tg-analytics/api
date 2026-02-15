@@ -225,8 +225,11 @@ $$;
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT NOT NULL UNIQUE,
+  hashed_password TEXT,
   first_name TEXT NOT NULL,
   last_name TEXT,
+  telegram_username CITEXT,
+  avatar_url TEXT,
   role user_role NOT NULL DEFAULT 'user',
   status TEXT NOT NULL DEFAULT 'active',
   is_guest BOOLEAN NOT NULL DEFAULT FALSE,
