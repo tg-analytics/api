@@ -5,7 +5,9 @@ from base64 import urlsafe_b64decode, urlsafe_b64encode
 from datetime import UTC, datetime, timedelta
 from secrets import token_hex
 from typing import Any
+from uuid import uuid4
 
+from postgrest.exceptions import APIError
 from supabase import Client
 
 
@@ -88,11 +90,50 @@ async def add_account_channel(
     *,
     account_id: str,
     user_id: str,
-    channel_id: str,
+    telegram_channel_id: int,
+    channel_name: str,
     alias_name: str | None,
     monitoring_enabled: bool,
     is_favorite: bool,
 ) -> dict[str, Any]:
+    existing_channel = (
+        client.table("channels")
+        .select("id")
+        .eq("telegram_channel_id", telegram_channel_id)
+        .limit(1)
+        .execute()
+    )
+    if existing_channel.data:
+        channel_id = str(existing_channel.data[0]["id"])
+    else:
+        channel_payload = {
+            "id": str(uuid4()),
+            "telegram_channel_id": telegram_channel_id,
+            "name": channel_name,
+        }
+        try:
+            created_channel = client.table("channels").insert(channel_payload).execute()
+        except APIError as exc:
+            message = str(exc).lower()
+            if "duplicate key" in message or "telegram_channel_id" in message:
+                retry_channel = (
+                    client.table("channels")
+                    .select("id")
+                    .eq("telegram_channel_id", telegram_channel_id)
+                    .limit(1)
+                    .execute()
+                )
+                if retry_channel.data:
+                    channel_id = str(retry_channel.data[0]["id"])
+                else:
+                    raise ValueError("Failed to resolve channel by telegram_channel_id.") from exc
+            else:
+                raise ValueError("Failed to create channel.") from exc
+        else:
+            if not created_channel.data:
+                raise ValueError("Failed to create channel.")
+            channel_id = str(created_channel.data[0]["id"])
+
     existing = (
         client.table("account_channels")
         .select("account_id, channel_id")
@@ -114,7 +155,15 @@ async def add_account_channel(
         "created_by": user_id,
         "updated_by": user_id,
     }
-    response = client.table("account_channels").insert(payload).execute()
+    try:
+        response = client.table("account_channels").insert(payload).execute()
+    except APIError as exc:
+        message = str(exc).lower()
+        if "duplicate key" in message:
+            raise ValueError("Channel already exists in account.") from exc
+        if "invalid input syntax for type uuid" in message:
+            raise ValueError("Invalid account or channel identifier.") from exc
+        raise ValueError("Failed to add channel") from exc
     if not response.data:
         raise ValueError("Failed to add channel")
     return _to_account_channel(response.data[0])
@@ -166,6 +215,18 @@ async def create_verification_request(
     user_id: str,
     verification_method: str,
 ) -> dict[str, Any]:
+    account_channel = (
+        client.table("account_channels")
+        .select("account_id, channel_id")
+        .eq("account_id", account_id)
+        .eq("channel_id", channel_id)
+        .is_("deleted_at", "null")
+        .limit(1)
+        .execute()
+    )
+    if not account_channel.data:
+        raise ValueError("Channel must be added to account before verification.")
+
     existing_pending = (
         client.table("channel_verification_requests")
         .select("id")

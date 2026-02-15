@@ -1908,9 +1908,10 @@ components:
 
     AddAccountChannelRequest:
       type: object
-      required: [channel_id]
+      required: [telegram_channel_id, channel_name]
       properties:
-        channel_id: { type: string, format: uuid }
+        telegram_channel_id: { type: integer, minimum: 1 }
+        channel_name: { type: string, minLength: 1, maxLength: 255 }
         alias_name: { type: string }
         monitoring_enabled: { type: boolean, default: true }
         is_favorite: { type: boolean, default: false }

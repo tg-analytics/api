@@ -491,7 +491,8 @@ curl -s -X POST "$API_BASE/v1.0/accounts/$ACCOUNT_ID/channels" \
   -H "X-Account-Id: $ACCOUNT_ID" \
   -H "Content-Type: application/json" \
   -d '{
-    "channel_id":"9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2",
+    "telegram_channel_id":100001,
+    "channel_name":"Tech News Daily",
     "alias_name":"Primary Tech Channel",
     "monitoring_enabled":true,
     "is_favorite":true
@@ -518,7 +519,7 @@ curl -s -X POST "$API_BASE/v1.0/accounts/$ACCOUNT_ID/channels" \
 {
   "error": {
     "code": "validation_error",
-    "message": "channel_id is required",
+    "message": "telegram_channel_id and channel_name are required",
     "details": []
   }
 }

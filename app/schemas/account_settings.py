@@ -124,10 +124,19 @@ class AccountChannel(BaseModel):
 
 
 class AddAccountChannelRequest(BaseModel):
-    channel_id: str
+    telegram_channel_id: int = Field(gt=0)
+    channel_name: str = Field(min_length=1, max_length=255)
     alias_name: str | None = None
     monitoring_enabled: bool = True
     is_favorite: bool = False
+
+    @field_validator("channel_name")
+    @classmethod
+    def strip_channel_name(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("must not be blank")
+        return stripped
 
 
 class AccountChannelInsights(BaseModel):

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+from uuid import UUID
 
 from fastapi.testclient import TestClient
 
@@ -150,6 +151,7 @@ def test_post_channel_denies_viewer_and_allows_admin():
             {"account_id": "acct-1", "user_id": "admin", "role": "admin", "status": "accepted", "deleted_at": None},
         ],
         "account_channels": [],
+        "channels": [],
     }
 
     _setup(storage, "viewer")
@@ -158,7 +160,7 @@ def test_post_channel_denies_viewer_and_allows_admin():
             forbidden = client.post(
                 "/v1.0/accounts/acct-1/channels",
                 headers=_headers(),
-                json={"channel_id": "ch-9"},
+                json={"telegram_channel_id": 9001, "channel_name": "Alpha"},
             )
         assert forbidden.status_code == 403
     finally:
@@ -170,10 +172,124 @@ def test_post_channel_denies_viewer_and_allows_admin():
             created = client.post(
                 "/v1.0/accounts/acct-1/channels",
                 headers=_headers(),
-                json={"channel_id": "ch-9", "is_favorite": True},
+                json={"telegram_channel_id": 9001, "channel_name": "Alpha", "is_favorite": True},
             )
         assert created.status_code == 201
-        assert created.json()["data"]["channel_id"] == "ch-9"
+        created_channel_id = created.json()["data"]["channel_id"]
+        UUID(created_channel_id)
+    finally:
+        app.dependency_overrides = {}
+
+
+def test_post_channel_links_existing_channel_by_telegram_id():
+    storage = {
+        "team_members": [
+            {"account_id": "acct-1", "user_id": "admin", "role": "admin", "status": "accepted", "deleted_at": None}
+        ],
+        "account_channels": [],
+        "channels": [
+            {"id": "11111111-1111-1111-1111-111111111111", "telegram_channel_id": 100001, "name": "Known Channel"}
+        ],
+    }
+    _setup(storage, "admin")
+
+    try:
+        with TestClient(app) as client:
+            created = client.post(
+                "/v1.0/accounts/acct-1/channels",
+                headers=_headers(),
+                json={"telegram_channel_id": 100001, "channel_name": "Ignored Name"},
+            )
+
+        assert created.status_code == 201
+        body = created.json()
+        assert body["data"]["channel_id"] == "11111111-1111-1111-1111-111111111111"
+        assert len(storage["channels"]) == 1
+    finally:
+        app.dependency_overrides = {}
+
+
+def test_post_channel_duplicate_returns_400():
+    storage = {
+        "team_members": [
+            {"account_id": "acct-1", "user_id": "admin", "role": "admin", "status": "accepted", "deleted_at": None}
+        ],
+        "account_channels": [],
+        "channels": [
+            {"id": "11111111-1111-1111-1111-111111111111", "telegram_channel_id": 100001, "name": "Known Channel"}
+        ],
+    }
+    _setup(storage, "admin")
+
+    try:
+        with TestClient(app) as client:
+            first = client.post(
+                "/v1.0/accounts/acct-1/channels",
+                headers=_headers(),
+                json={"telegram_channel_id": 100001, "channel_name": "Known Channel"},
+            )
+            duplicate = client.post(
+                "/v1.0/accounts/acct-1/channels",
+                headers=_headers(),
+                json={"telegram_channel_id": 100001, "channel_name": "Known Channel"},
+            )
+
+        assert first.status_code == 201
+        assert duplicate.status_code == 400
+        assert "already exists" in duplicate.json()["detail"].lower()
+    finally:
+        app.dependency_overrides = {}
+
+
+def test_post_channel_validation_errors_for_missing_and_blank_fields():
+    storage = {
+        "team_members": [
+            {"account_id": "acct-1", "user_id": "admin", "role": "admin", "status": "accepted", "deleted_at": None}
+        ],
+        "account_channels": [],
+        "channels": [],
+    }
+    _setup(storage, "admin")
+
+    try:
+        with TestClient(app) as client:
+            missing = client.post(
+                "/v1.0/accounts/acct-1/channels",
+                headers=_headers(),
+                json={"alias_name": "Only alias"},
+            )
+            blank_name = client.post(
+                "/v1.0/accounts/acct-1/channels",
+                headers=_headers(),
+                json={"telegram_channel_id": 42, "channel_name": "   "},
+            )
+
+        assert missing.status_code == 422
+        assert blank_name.status_code == 422
+    finally:
+        app.dependency_overrides = {}
+
+
+def test_verification_create_requires_channel_link_in_account():
+    storage = {
+        "team_members": [
+            {"account_id": "acct-1", "user_id": "admin", "role": "admin", "status": "accepted", "deleted_at": None}
+        ],
+        "channel_verification_requests": [],
+        "account_channels": [],
+    }
+    _setup(storage, "admin")
+
+    try:
+        with TestClient(app) as client:
+            create_resp = client.post(
+                "/v1.0/accounts/acct-1/channels/ch-2/verification",
+                headers=_headers(),
+                json={"verification_method": "description_code"},
+            )
+
+        assert create_resp.status_code == 400
+        assert "must be added to account" in create_resp.json()["detail"].lower()
     finally:
         app.dependency_overrides = {}
 
@@ -195,7 +311,9 @@ def test_verification_create_and_confirm_expired_error():
                 "expires_at": "2026-01-02T00:00:00Z",
             }
         ],
-        "account_channels": [],
+        "account_channels": [
+            {"account_id": "acct-1", "channel_id": "ch-2", "deleted_at": None},
+        ],
         "channels": [],
     }
     _setup(storage, "admin")
