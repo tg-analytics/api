@@ -11,6 +11,7 @@ from app.api.routes import (
     rankings,
     signin,
     team_members,
+    trackers,
     users,
 )
 from app.core.config import get_settings
@@ -45,6 +46,7 @@ app.include_router(notifications.router)
 app.include_router(channels.router)
 app.include_router(mini_apps.router)
 app.include_router(rankings.router)
+app.include_router(trackers.router)
 
 
 @app.get("/", tags=["public"])
