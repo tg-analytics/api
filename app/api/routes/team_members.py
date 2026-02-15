@@ -305,14 +305,17 @@ async def remove_team_member(
             detail="Team member not found"
         )
     
-    # Get current user's default account to verify authorization
-    account_id = await get_user_default_account_id(client, current_user["id"])
-    
-    if not account_id or member["account_id"] != account_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to remove this team member"
-        )
+    # Determine if the current user is removing their own membership and handle auth accordingly
+    is_self_member = member["user_id"] == current_user["id"]
+    account_id = None
+    if not is_self_member:
+        account_id = await get_user_default_account_id(client, current_user["id"])
+        
+        if not account_id or member["account_id"] != account_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to remove this team member"
+            )
 
     # Prevent removing any account owner
     if member["role"].lower() == "owner":
