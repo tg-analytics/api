@@ -1356,115 +1356,119 @@ curl -s -X PATCH "$API_BASE/v1.0/users/me/notifications" \
 
 ## Team
 
-### GET `/v1.0/accounts/{accountId}/members` (base)
+### POST `/v1.0/team_members/invite` success
 
 ```bash
-curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/members" \
+curl -s -X POST "$API_BASE/v1.0/team_members/invite" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Account-Id: $ACCOUNT_ID"
-```
-
-### GET `/v1.0/accounts/{accountId}/members` (client-side filtered by role)
-
-```bash
-curl -s "$API_BASE/v1.0/accounts/$ACCOUNT_ID/members" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Account-Id: $ACCOUNT_ID"
-```
-
-### POST `/v1.0/accounts/{accountId}/members/invitations` success
-
-```bash
-curl -s -X POST "$API_BASE/v1.0/accounts/$ACCOUNT_ID/members/invitations" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Account-Id: $ACCOUNT_ID" \
   -H "Content-Type: application/json" \
   -d '{
-    "email":"analyst@example.com",
-    "role":"editor",
-    "channel_access":["9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2"]
+    "email": "analyst@example.com",
+    "role": "admin"
   }'
 ```
 
-### POST `/v1.0/accounts/{accountId}/members/invitations` error (already member)
-
 ```json
 {
-  "error": {
-    "code": "validation_error",
-    "message": "User is already a account member.",
-    "details": []
-  }
+  "message": "Invitation sent successfully",
+  "email": "analyst@example.com",
+  "user_exists": true,
+  "status": "invited"
 }
 ```
 
-### PATCH `/v1.0/accounts/{accountId}/members/{memberId}` success
+### POST `/v1.0/team_members/invite` error (already member)
+
+```json
+{
+  "detail": "User is already a team member"
+}
+```
+
+### GET `/v1.0/team_members` (base)
 
 ```bash
-curl -s -X PATCH "$API_BASE/v1.0/accounts/$ACCOUNT_ID/members/8deefe66-b5b8-4b53-8f14-f04ab8f2f146" \
+curl -s "$API_BASE/v1.0/team_members?limit=20" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+```json
+{
+  "items": [
+    {
+      "id": "8deefe66-b5b8-4b53-8f14-f04ab8f2f146",
+      "role": "admin",
+      "user_id": "f8472f26-9b16-4ff7-a533-b365f9f7ecf3",
+      "status": "accepted",
+      "name": "Alex Carter",
+      "first_name": "Alex",
+      "last_name": "Carter",
+      "joined_at": "2026-02-10T09:30:00Z"
+    }
+  ],
+  "next_cursor": "eyJsYXN0X2lkIjoiOGRlZWZlNjYtYjViOC00YjUzLThmMTQtZjA0YWI4ZjJmMTQ2In0="
+}
+```
+
+### GET `/v1.0/team_members` (filtered + paginated)
+
+```bash
+curl -s "$API_BASE/v1.0/team_members?statuses=invited&statuses=accepted&limit=10&cursor=eyJsYXN0X2lkIjoiOGRlZWZlNjYifQ==" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### GET `/v1.0/team_members/{memberId}`
+
+```bash
+curl -s "$API_BASE/v1.0/team_members/8deefe66-b5b8-4b53-8f14-f04ab8f2f146" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### PATCH `/v1.0/team_members/{memberId}` success
+
+```bash
+curl -s -X PATCH "$API_BASE/v1.0/team_members/8deefe66-b5b8-4b53-8f14-f04ab8f2f146" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Account-Id: $ACCOUNT_ID" \
   -H "Content-Type: application/json" \
-  -d '{"role":"admin","status":"active"}'
+  -d '{"role":"guest","status":"accepted"}'
 ```
-
-### PATCH `/v1.0/accounts/{accountId}/members/{memberId}` error (forbidden)
 
 ```json
 {
-  "error": {
-    "code": "forbidden",
-    "message": "Only owner/admin can update members.",
-    "details": []
-  }
+  "message": "Team member updated successfully",
+  "id": "8deefe66-b5b8-4b53-8f14-f04ab8f2f146",
+  "role": "guest",
+  "status": "accepted"
 }
 ```
 
-### DELETE `/v1.0/accounts/{accountId}/members/{memberId}` success
-
-```bash
-curl -s -X DELETE "$API_BASE/v1.0/accounts/$ACCOUNT_ID/members/8deefe66-b5b8-4b53-8f14-f04ab8f2f146" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Account-Id: $ACCOUNT_ID" \
-  -i
-```
-
-### DELETE `/v1.0/accounts/{accountId}/members/{memberId}` error (owner removal blocked)
+### PATCH `/v1.0/team_members/{memberId}` error (owner update blocked)
 
 ```json
 {
-  "error": {
-    "code": "validation_error",
-    "message": "Account owner cannot be removed.",
-    "details": []
-  }
+  "detail": "Cannot update the account owner"
 }
 ```
 
-### PUT `/v1.0/accounts/{accountId}/members/{memberId}/channel-access` success
+### DELETE `/v1.0/team_members/{memberId}` success
 
 ```bash
-curl -s -X PUT "$API_BASE/v1.0/accounts/$ACCOUNT_ID/members/8deefe66-b5b8-4b53-8f14-f04ab8f2f146/channel-access" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Account-Id: $ACCOUNT_ID" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "channels":[
-      {"channel_id":"9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2","access_level":"editor"},
-      {"channel_id":"d5e220e1-74f7-4b20-84a6-67100c53ca76","access_level":"viewer"}
-    ]
-  }'
+curl -s -X DELETE "$API_BASE/v1.0/team_members/8deefe66-b5b8-4b53-8f14-f04ab8f2f146" \
+  -H "Authorization: Bearer $TOKEN"
 ```
-
-### PUT `/v1.0/accounts/{accountId}/members/{memberId}/channel-access` error (invalid level)
 
 ```json
 {
-  "error": {
-    "code": "validation_error",
-    "message": "access_level must be one of viewer,editor,admin",
-    "details": []
-  }
+  "message": "Team member removed successfully",
+  "id": "8deefe66-b5b8-4b53-8f14-f04ab8f2f146"
+}
+```
+
+### DELETE `/v1.0/team_members/{memberId}` error (owner removal blocked)
+
+```json
+{
+  "detail": "Cannot remove the account owner"
 }
 ```
 
