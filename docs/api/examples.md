@@ -207,10 +207,38 @@ curl -s "$API_BASE/v1.0/home/categories?limit=5&cursor=eyJvZmZzZXQiOjV9"
 curl -s "$API_BASE/v1.0/home/countries?limit=5"
 ```
 
+```json
+{
+  "data": [
+    { "code": "AF", "name": "Afghanistan", "flag_emoji": "🇦🇫", "channels_count": 10 },
+    { "code": "DZ", "name": "Algeria", "flag_emoji": "🇩🇿", "channels_count": 8 },
+    { "code": "AR", "name": "Argentina", "flag_emoji": "🇦🇷", "channels_count": 2000 },
+    { "code": "AM", "name": "Armenia", "flag_emoji": "🇦🇲", "channels_count": 3600 },
+    { "code": "AU", "name": "Australia", "flag_emoji": "🇦🇺", "channels_count": 7 }
+  ],
+  "page": { "next_cursor": "eyJvZmZzZXQiOjV9", "has_more": true },
+  "meta": { "total_estimate": 72 }
+}
+```
+
 ### GET `/v1.0/home/countries` (paginated)
 
 ```bash
 curl -s "$API_BASE/v1.0/home/countries?limit=5&cursor=eyJvZmZzZXQiOjV9"
+```
+
+```json
+{
+  "data": [
+    { "code": "AT", "name": "Austria", "flag_emoji": "🇦🇹", "channels_count": 89 },
+    { "code": "AZ", "name": "Azerbaijan", "flag_emoji": "🇦🇿", "channels_count": 3600 },
+    { "code": "BD", "name": "Bangladesh", "flag_emoji": "🇧🇩", "channels_count": 25700 },
+    { "code": "BY", "name": "Belarus", "flag_emoji": "🇧🇾", "channels_count": 4400 },
+    { "code": "BO", "name": "Bolivia", "flag_emoji": "🇧🇴", "channels_count": 61 }
+  ],
+  "page": { "next_cursor": "eyJvZmZzZXQiOjEwfQ==", "has_more": true },
+  "meta": { "total_estimate": 72 }
+}
 ```
 
 ---
