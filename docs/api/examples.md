@@ -204,15 +204,13 @@ curl -s "$API_BASE/v1.0/home/categories?limit=5&cursor=eyJvZmZzZXQiOjV9"
 ### GET `/v1.0/home/countries` (base)
 
 ```bash
-curl -s "$API_BASE/v1.0/home/countries?limit=5" \
-  -H "Authorization: Bearer $TOKEN"
+curl -s "$API_BASE/v1.0/home/countries?limit=5"
 ```
 
 ### GET `/v1.0/home/countries` (paginated)
 
 ```bash
-curl -s "$API_BASE/v1.0/home/countries?limit=5&cursor=eyJvZmZzZXQiOjV9" \
-  -H "Authorization: Bearer $TOKEN"
+curl -s "$API_BASE/v1.0/home/countries?limit=5&cursor=eyJvZmZzZXQiOjV9"
 ```
 
 ---

@@ -90,7 +90,20 @@ def _get_fake_supabase():
             {"slug": "e-commerce", "name": "E-commerce", "icon": "shopping-bag", "channels_count": 1800},
             {"slug": "education", "name": "Education", "icon": "graduation-cap", "channels_count": 2800},
             {"slug": "facts", "name": "Facts", "icon": "clipboard-list", "channels_count": 8900},
-        ]
+        ],
+        "countries": [
+            {"code": "US", "name": "United States", "flag_emoji": "flag-us", "channels_count": 600000},
+            {"code": "DE", "name": "Germany", "flag_emoji": "flag-de", "channels_count": 9400},
+            {"code": "FR", "name": "France", "flag_emoji": "flag-fr", "channels_count": 19600},
+            {"code": "BR", "name": "Brazil", "flag_emoji": "flag-br", "channels_count": 35600},
+            {"code": "CA", "name": "Canada", "flag_emoji": "flag-ca", "channels_count": 9},
+            {"code": "AU", "name": "Australia", "flag_emoji": "flag-au", "channels_count": 7},
+            {"code": "JP", "name": "Japan", "flag_emoji": "flag-jp", "channels_count": 4900},
+            {"code": "IN", "name": "India", "flag_emoji": "flag-in", "channels_count": 235500},
+            {"code": "IT", "name": "Italy", "flag_emoji": "flag-it", "channels_count": 16400},
+            {"code": "MX", "name": "Mexico", "flag_emoji": "flag-mx", "channels_count": 3700},
+            {"code": "ES", "name": "Spain", "flag_emoji": None, "channels_count": 1200},
+        ],
     }
     return FakeSupabaseClient(storage)
 
@@ -184,6 +197,102 @@ def test_get_home_categories_is_public_without_auth():
     try:
         with TestClient(app) as client:
             response = client.get("/v1.0/home/categories")
+
+        assert response.status_code == 200
+    finally:
+        app.dependency_overrides = {}
+
+
+def test_get_home_countries_base_response_shape():
+    supabase_client = _get_fake_supabase()
+    app.dependency_overrides[get_supabase] = lambda: supabase_client
+
+    try:
+        with TestClient(app) as client:
+            response = client.get("/v1.0/home/countries?limit=5")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert [item["name"] for item in body["data"]] == [
+            "Australia",
+            "Brazil",
+            "Canada",
+            "France",
+            "Germany",
+        ]
+        assert body["data"][0]["code"] == "AU"
+        assert body["data"][0]["flag_emoji"] == "flag-au"
+        assert body["page"]["has_more"] is True
+        assert body["page"]["next_cursor"] == "eyJvZmZzZXQiOjV9"
+        assert body["meta"]["total_estimate"] == 11
+    finally:
+        app.dependency_overrides = {}
+
+
+def test_get_home_countries_cursor_pagination():
+    supabase_client = _get_fake_supabase()
+    app.dependency_overrides[get_supabase] = lambda: supabase_client
+
+    try:
+        with TestClient(app) as client:
+            first_page = client.get("/v1.0/home/countries?limit=5")
+            assert first_page.status_code == 200
+            next_cursor = first_page.json()["page"]["next_cursor"]
+
+            second_page = client.get(f"/v1.0/home/countries?limit=5&cursor={next_cursor}")
+
+        assert second_page.status_code == 200
+        body = second_page.json()
+        assert [item["name"] for item in body["data"]] == [
+            "India",
+            "Italy",
+            "Japan",
+            "Mexico",
+            "Spain",
+        ]
+        assert body["data"][4]["flag_emoji"] is None
+        assert body["page"]["has_more"] is True
+        assert body["page"]["next_cursor"] == "eyJvZmZzZXQiOjEwfQ=="
+    finally:
+        app.dependency_overrides = {}
+
+
+def test_get_home_countries_supports_unpadded_cursor_example():
+    supabase_client = _get_fake_supabase()
+    app.dependency_overrides[get_supabase] = lambda: supabase_client
+
+    try:
+        with TestClient(app) as client:
+            response = client.get("/v1.0/home/countries?limit=5&cursor=eyJvZmZzZXQiOjV9")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["data"][0]["name"] == "India"
+    finally:
+        app.dependency_overrides = {}
+
+
+def test_get_home_countries_invalid_cursor():
+    supabase_client = _get_fake_supabase()
+    app.dependency_overrides[get_supabase] = lambda: supabase_client
+
+    try:
+        with TestClient(app) as client:
+            response = client.get("/v1.0/home/countries?cursor=not-a-valid-cursor")
+
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Invalid pagination cursor"
+    finally:
+        app.dependency_overrides = {}
+
+
+def test_get_home_countries_is_public_without_auth():
+    supabase_client = _get_fake_supabase()
+    app.dependency_overrides[get_supabase] = lambda: supabase_client
+
+    try:
+        with TestClient(app) as client:
+            response = client.get("/v1.0/home/countries")
 
         assert response.status_code == 200
     finally:

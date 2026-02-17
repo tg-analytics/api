@@ -21,3 +21,20 @@ class HomeCategoriesEnvelope(BaseModel):
     data: list[HomeCategoryItem]
     page: PageResponse
     meta: HomeCategoriesMeta
+
+
+class HomeCountryItem(BaseModel):
+    code: str
+    name: str
+    flag_emoji: str | None = None
+    channels_count: int
+
+
+class HomeCountriesMeta(BaseModel):
+    total_estimate: int
+
+
+class HomeCountriesEnvelope(BaseModel):
+    data: list[HomeCountryItem]
+    page: PageResponse
+    meta: HomeCountriesMeta

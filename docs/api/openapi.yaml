@@ -135,8 +135,10 @@ paths:
       tags: [Home]
       operationId: getHomeCountries
       summary: Get top countries for homepage market block.
+      security: []
       parameters:
         - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
       responses:
         '200':
           description: OK
@@ -144,8 +146,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CountryStatsEnvelope'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
 
   /v1.0/channels:
     get:
@@ -1689,7 +1689,7 @@ components:
       properties:
         code: { type: string }
         name: { type: string }
-        flag_emoji: { type: string }
+        flag_emoji: { type: [string, 'null'] }
         channels_count: { type: integer }
 
     ChannelListItem:

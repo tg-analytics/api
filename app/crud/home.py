@@ -42,6 +42,15 @@ def _normalize_category_row(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _normalize_country_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "code": row["code"],
+        "name": row["name"],
+        "flag_emoji": row.get("flag_emoji"),
+        "channels_count": int(row.get("channels_count") or 0),
+    }
+
+
 async def get_home_categories(
     client: Client,
     *,
@@ -70,6 +79,40 @@ async def get_home_categories(
 
     return {
         "items": [_normalize_category_row(row) for row in page_rows],
+        "next_cursor": next_cursor,
+        "has_more": has_more,
+        "total_estimate": total_estimate,
+    }
+
+
+async def get_home_countries(
+    client: Client,
+    *,
+    limit: int = 20,
+    cursor: str | None = None,
+) -> dict[str, Any]:
+    offset = 0
+    if cursor:
+        offset = _decode_cursor(cursor)
+
+    response = (
+        client.table("countries")
+        .select("code, name, flag_emoji, channels_count")
+        .order("name", desc=False)
+        .range(offset, offset + limit)
+        .execute()
+    )
+    rows = response.data or []
+
+    has_more = len(rows) > limit
+    page_rows = rows[:limit]
+    next_cursor = _encode_cursor(offset=offset + limit) if has_more else None
+
+    total_response = client.table("countries").select("code", count="exact", head=True).execute()
+    total_estimate = int(total_response.count or 0)
+
+    return {
+        "items": [_normalize_country_row(row) for row in page_rows],
         "next_cursor": next_cursor,
         "has_more": has_more,
         "total_estimate": total_estimate,
