@@ -164,15 +164,41 @@ curl -s "$API_BASE/v1.0/home/metrics" \
 ### GET `/v1.0/home/categories` (base)
 
 ```bash
-curl -s "$API_BASE/v1.0/home/categories?limit=5" \
-  -H "Authorization: Bearer $TOKEN"
+curl -s "$API_BASE/v1.0/home/categories?limit=5"
+```
+
+```json
+{
+  "data": [
+    { "slug": "art-design", "name": "Art & Design", "icon": "palette", "channels_count": 62800 },
+    { "slug": "beauty", "name": "Beauty", "icon": "sparkles", "channels_count": 65200 },
+    { "slug": "betting-casino", "name": "Betting and Casino", "icon": "dice-5", "channels_count": 145500 },
+    { "slug": "blogs", "name": "Blogs", "icon": "file-text", "channels_count": 127500 },
+    { "slug": "books", "name": "Books", "icon": "book-open", "channels_count": 35300 }
+  ],
+  "page": { "next_cursor": "eyJvZmZzZXQiOjV9", "has_more": true },
+  "meta": { "total_estimate": 42 }
+}
 ```
 
 ### GET `/v1.0/home/categories` (paginated)
 
 ```bash
-curl -s "$API_BASE/v1.0/home/categories?limit=5&cursor=eyJvZmZzZXQiOjV9" \
-  -H "Authorization: Bearer $TOKEN"
+curl -s "$API_BASE/v1.0/home/categories?limit=5&cursor=eyJvZmZzZXQiOjV9"
+```
+
+```json
+{
+  "data": [
+    { "slug": "business", "name": "Business", "icon": "briefcase-business", "channels_count": 80800 },
+    { "slug": "career", "name": "Career", "icon": "users", "channels_count": 18400 },
+    { "slug": "cryptocurrency", "name": "Cryptocurrency", "icon": "coins", "channels_count": 9800 },
+    { "slug": "e-commerce", "name": "E-commerce", "icon": "shopping-bag", "channels_count": 1800 },
+    { "slug": "economy-and-finance", "name": "Economy & Finance", "icon": "landmark", "channels_count": 76800 }
+  ],
+  "page": { "next_cursor": "eyJvZmZzZXQiOjEwfQ==", "has_more": true },
+  "meta": { "total_estimate": 42 }
+}
 ```
 
 ### GET `/v1.0/home/countries` (base)

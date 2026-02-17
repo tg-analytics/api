@@ -118,8 +118,10 @@ paths:
       tags: [Home]
       operationId: getHomeCategories
       summary: Get top categories for homepage catalog block.
+      security: []
       parameters:
         - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
       responses:
         '200':
           description: OK
@@ -127,8 +129,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CategoryStatsEnvelope'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
 
   /v1.0/home/countries:
     get:
@@ -1681,6 +1681,7 @@ components:
       properties:
         slug: { type: string }
         name: { type: string }
+        icon: { type: [string, 'null'] }
         channels_count: { type: integer }
 
     CountryStat:
