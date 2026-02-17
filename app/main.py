@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import (
     account_channels,
+    advertisers,
     api_keys,
     auth,
     billing,
@@ -47,6 +48,7 @@ app.include_router(users.router)
 app.include_router(team_members.router)
 app.include_router(notifications.router)
 app.include_router(channels.router)
+app.include_router(advertisers.router)
 app.include_router(mini_apps.router)
 app.include_router(rankings.router)
 app.include_router(trackers.router)

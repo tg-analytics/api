@@ -666,6 +666,55 @@ curl -s "$API_BASE/v1.0/advertisers?time_period_days=30&sort_by=estimated_spend&
   -H "Authorization: Bearer $TOKEN"
 ```
 
+```json
+{
+  "data": [
+    {
+      "rank": 1,
+      "advertiser_id": "2e63db9e-13f7-4204-b8b6-a394f40ca83a",
+      "name": "Binance",
+      "slug": "binance",
+      "logo_url": "https://cdn.example.com/adv/binance.png",
+      "industry_slug": "crypto",
+      "industry_name": "Crypto",
+      "estimated_spend": 2500000,
+      "total_ads": 4500,
+      "channels_used": 1200,
+      "avg_engagement_rate": 4.2,
+      "trend": 15.3,
+      "active_creatives": 156,
+      "last_active_at": "2026-02-14T08:00:00Z"
+    },
+    {
+      "rank": 2,
+      "advertiser_id": "9a2cd51e-e4f8-4de0-b4f3-393f18e10af5",
+      "name": "Telegram Premium",
+      "slug": "telegram-premium",
+      "logo_url": "https://cdn.example.com/adv/tgpremium.png",
+      "industry_slug": "tech",
+      "industry_name": "Tech",
+      "estimated_spend": 1800000,
+      "total_ads": 3900,
+      "channels_used": 2100,
+      "avg_engagement_rate": 5.8,
+      "trend": 22.1,
+      "active_creatives": 89,
+      "last_active_at": "2026-02-13T21:30:00Z"
+    }
+  ],
+  "page": {
+    "next_cursor": "eyJsYXN0X2lkIjoiOWEyY2Q1MWUtZTRmOC00ZGUwLWI0ZjMtMzkzZjE4ZTEwYWY1Iiwib2Zmc2V0IjoyMH0=",
+    "has_more": true
+  },
+  "meta": {
+    "total_estimate": 12450,
+    "time_period_days": 30,
+    "snapshot_date": "2026-02-14",
+    "baseline_date": "2026-01-15"
+  }
+}
+```
+
 ### GET `/v1.0/advertisers` (search + filters)
 
 ```bash
@@ -680,11 +729,79 @@ curl -s "$API_BASE/v1.0/advertisers/summary?time_period_days=30" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
+```json
+{
+  "data": {
+    "active_advertisers": 12450,
+    "total_ad_spend": 48200000,
+    "ad_campaigns": 156000,
+    "avg_engagement_rate": 3.8,
+    "active_advertisers_delta": 234,
+    "total_ad_spend_delta": 6200000,
+    "total_ad_spend_delta_percent": 14.8,
+    "ad_campaigns_delta": 17100,
+    "ad_campaigns_delta_percent": 12.3,
+    "avg_engagement_rate_delta": 0.2,
+    "avg_engagement_rate_delta_percent": 5.6
+  },
+  "meta": {
+    "time_period_days": 30,
+    "snapshot_date": "2026-02-14",
+    "baseline_date": "2026-01-15"
+  }
+}
+```
+
 ### GET `/v1.0/advertisers/{advertiserId}`
 
 ```bash
 curl -s "$API_BASE/v1.0/advertisers/2e63db9e-13f7-4204-b8b6-a394f40ca83a" \
   -H "Authorization: Bearer $TOKEN"
+```
+
+```json
+{
+  "data": {
+    "advertiser_id": "2e63db9e-13f7-4204-b8b6-a394f40ca83a",
+    "name": "Binance",
+    "slug": "binance",
+    "logo_url": "https://cdn.example.com/adv/binance.png",
+    "industry_slug": "crypto",
+    "industry_name": "Crypto",
+    "estimated_spend": 2500000,
+    "total_ads": 4500,
+    "channels_used": 1200,
+    "avg_engagement_rate": 4.2,
+    "trend": 15.3,
+    "active_creatives": 156,
+    "last_active_at": "2026-02-14T08:00:00Z",
+    "website_url": "https://www.binance.com",
+    "description": "Global crypto exchange and ecosystem products.",
+    "top_channels": [
+      {
+        "channel_id": "f8e98743-1448-4d13-8f8f-b8fbbf272141",
+        "name": "Crypto News",
+        "username": "@cryptonews",
+        "rank": 1,
+        "impressions": 8700000,
+        "estimated_spend": 520000,
+        "engagement_rate": 4.6
+      },
+      {
+        "channel_id": "9f28253d-8ffd-4d2f-a67c-ebaf0f6ba2f2",
+        "name": "Trading Signals",
+        "username": "@tradingsignals",
+        "rank": 2,
+        "impressions": 6500000,
+        "estimated_spend": 410000,
+        "engagement_rate": 4.1
+      }
+    ]
+  },
+  "meta": {
+    "snapshot_date": "2026-02-14"
+  }
+}
 ```
 
 ### GET `/v1.0/advertisers/{advertiserId}/ads` (base)

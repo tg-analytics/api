@@ -1991,27 +1991,42 @@ components:
     AdvertiserListItem:
       type: object
       properties:
+        rank: { type: integer }
         advertiser_id: { type: string, format: uuid }
         name: { type: string }
         slug: { type: string }
+        logo_url: { type: [string, 'null'] }
         industry_slug: { type: [string, 'null'] }
+        industry_name: { type: [string, 'null'] }
         estimated_spend: { type: [number, 'null'] }
         total_ads: { type: [integer, 'null'] }
         channels_used: { type: [integer, 'null'] }
         avg_engagement_rate: { type: [number, 'null'] }
         trend: { type: [number, 'null'] }
         active_creatives: { type: [integer, 'null'] }
+        last_active_at: { type: [string, 'null'], format: date-time }
 
     AdvertiserDetail:
-      allOf:
-        - $ref: '#/components/schemas/AdvertiserListItem'
-        - type: object
-          properties:
-            website_url: { type: [string, 'null'] }
-            description: { type: [string, 'null'] }
-            top_channels:
-              type: array
-              items: { $ref: '#/components/schemas/AdvertiserTopChannel' }
+      type: object
+      properties:
+        advertiser_id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        logo_url: { type: [string, 'null'] }
+        industry_slug: { type: [string, 'null'] }
+        industry_name: { type: [string, 'null'] }
+        estimated_spend: { type: [number, 'null'] }
+        total_ads: { type: [integer, 'null'] }
+        channels_used: { type: [integer, 'null'] }
+        avg_engagement_rate: { type: [number, 'null'] }
+        trend: { type: [number, 'null'] }
+        active_creatives: { type: [integer, 'null'] }
+        last_active_at: { type: [string, 'null'], format: date-time }
+        website_url: { type: [string, 'null'] }
+        description: { type: [string, 'null'] }
+        top_channels:
+          type: array
+          items: { $ref: '#/components/schemas/AdvertiserTopChannel' }
 
     AdvertiserTopChannel:
       type: object
@@ -2022,6 +2037,7 @@ components:
         rank: { type: integer }
         impressions: { type: [integer, 'null'] }
         estimated_spend: { type: [number, 'null'] }
+        engagement_rate: { type: [number, 'null'] }
 
     AdvertiserSummary:
       type: object
@@ -2030,6 +2046,13 @@ components:
         total_ad_spend: { type: number }
         ad_campaigns: { type: integer }
         avg_engagement_rate: { type: number }
+        active_advertisers_delta: { type: [integer, 'null'] }
+        total_ad_spend_delta: { type: [number, 'null'] }
+        total_ad_spend_delta_percent: { type: [number, 'null'] }
+        ad_campaigns_delta: { type: [integer, 'null'] }
+        ad_campaigns_delta_percent: { type: [number, 'null'] }
+        avg_engagement_rate_delta: { type: [number, 'null'] }
+        avg_engagement_rate_delta_percent: { type: [number, 'null'] }
 
     RankingChannelItem:
       type: object
